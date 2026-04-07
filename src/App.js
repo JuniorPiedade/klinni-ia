@@ -2,21 +2,26 @@ import React, { useState, useEffect } from 'react';
 import { auth } from './firebase/config';
 import { onAuthStateChanged } from 'firebase/auth';
 
-// Removi as chaves { } para garantir que a Vercel encontre os arquivos
-import Login from './components/Login';
-import Registro from './components/Registro';
-import NovoLeadForm from './components/NovoLeadForm';
-import ListaLeads from './components/ListaLeads';
+// Importações "Flexíveis" - Funcionam com ou sem chaves { }
+import * as LoginModule from './components/Login';
+import * as RegistroModule from './components/Registro';
+import * as NovoLeadFormModule from './components/NovoLeadForm';
+import * as ListaLeadsModule from './components/ListaLeads';
+
+// Ajuste para garantir que o React ache o componente certo
+const Login = LoginModule.Login || LoginModule.default;
+const Registro = RegistroModule.Registro || RegistroModule.default;
+const NovoLeadForm = NovoLeadFormModule.NovoLeadForm || NovoLeadFormModule.default;
+const ListaLeads = ListaLeadsModule.ListaLeads || ListaLeadsModule.default;
 
 function App() {
   const [pagina, setPagina] = useState('login');
   const [carregando, setCarregando] = useState(true);
 
   useEffect(() => {
-    // Monitora o login do usuário
     const monitorarUsuario = onAuthStateChanged(auth, (user) => {
       if (user) {
-        setPagina('lista'); 
+        setPagina('lista');
       } else {
         setPagina('login');
       }
@@ -25,19 +30,17 @@ function App() {
     return () => monitorarUsuario();
   }, []);
 
-  if (carregando) return <div className="p-20 text-center font-sans">Iniciando Klinni IA...</div>;
+  if (carregando) return <div className="p-20 text-center font-sans text-gray-400">Iniciando Klinni IA...</div>;
 
   return (
     <div className="min-h-screen bg-[#F4F7F6] font-sans">
-      {/* MENU SUPERIOR */}
       <nav className="bg-white border-b p-4 flex justify-center gap-8 shadow-sm">
-        <button onClick={() => setPagina('lista')} className="text-xs font-bold text-gray-500 hover:text-[#7FA9D1]">📋 LEADS</button>
-        <button onClick={() => setPagina('novo')} className="text-xs font-bold text-gray-500 hover:text-[#7FA9D1]">➕ NOVO</button>
+        <button onClick={() => setPagina('lista')} className="text-xs font-bold text-gray-400 hover:text-[#7FA9D1]">📋 LEADS</button>
+        <button onClick={() => setPagina('novo')} className="text-xs font-bold text-gray-400 hover:text-[#7FA9D1]">➕ NOVO</button>
         <button onClick={() => auth.signOut()} className="text-xs font-bold text-red-300">SAIR</button>
       </nav>
 
-      {/* ÁREA DE CONTEÚDO */}
-      <main className="p-4">
+      <main className="p-4 max-w-lg mx-auto">
         {pagina === 'login' && <Login />}
         {pagina === 'registro' && <Registro />}
         {pagina === 'lista' && <ListaLeads />}
