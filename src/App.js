@@ -1,32 +1,65 @@
-import { ListaLeads } from './components/ListaLeads';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { auth, db } from './firebase/config';
+import { doc, getDoc } from 'firebase/firestore';
+import { onAuthStateChanged } from 'firebase/auth';
+
+// Importando as telas que já criamos
 import { Login } from './components/Login';
 import { Registro } from './components/Registro';
 import { NovoLeadForm } from './components/NovoLeadForm';
+import { ListaLeads } from './components/ListaLeads';
 import { AdminLogs } from './components/AdminLogs';
 
 function App() {
-  // Simulação de navegação simples para você visualizar
-  // No futuro, trocaremos por um sistema de rotas automático
-  const [pagina, setPagina] = React.useState('registro');
+  const [pagina, setPagina] = useState('login');
+  const [cargo, setCargo] = useState('crc'); // 'crc' é o padrão (vendedora)
+  const [carregando, setCarregando] = useState(true);
+
+  useEffect(() => {
+    // Monitora se alguém logou
+    const monitorarUsuario = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        // Se logou, busca no Banco de Dados qual o CARGO desse e-mail
+        const dadosUsuario = await getDoc(doc(db, "users", user.uid));
+        if (dadosUsuario.exists()) {
+          setCargo(dadosUsuario.data().role); // Salva se é 'admin' ou 'crc'
+          setPagina('lista'); // Manda direto para a lista de leads
+        }
+      } else {
+        setPagina('login');
+      }
+      setCarregando(false);
+    });
+    return () => monitorarUsuario();
+  }, []);
+
+  if (carregando) return <div className="p-20 text-center">Iniciando Klinni IA...</div>;
 
   return (
-    <div>
-      {/* Menu de Visualização Temporário para você testar */}
-      <nav className="bg-white p-2 flex gap-4 text-[10px] border-b justify-center">
-        <button onClick={() => setPagina('registro')}>1. Criar Conta (Admin)</button>
-        <button onClick={() => setPagina('lista')}>5. Ver Leads</button>
-        <button onClick={() => setPagina('login')}>2. Login</button>
-        <button onClick={() => setPagina('leads')}>3. Gestão de Leads</button>
-        <button onClick={() => setPagina('admin')}>4. Painel do Dono</button>
+    <div className="min-h-screen bg-[#F4F7F6]">
+      {/* MENU SUPERIOR INTELIGENTE */}
+      <nav className="bg-white border-b p-4 flex justify-center gap-8 shadow-sm">
+        <button onClick={() => setPagina('lista')} className="text-xs font-bold text-gray-500 hover:text-[#7FA9D1]">📋 LEADS</button>
+        <button onClick={() => setPagina('novo')} className="text-xs font-bold text-gray-500 hover:text-[#7FA9D1]">➕ NOVO</button>
+        
+        {/* 🔒 AQUI ESTÁ A MÁGICA: O botão abaixo SÓ APARECE se você for o ADMIN */}
+        {cargo === 'admin' && (
+          <button onClick={() => setPagina('admin')} className="text-xs font-bold text-[#7FA9D1] border-b-2 border-[#7FA9D1]">
+            🛡️ PAINEL DO DONO
+          </button>
+        )}
+        
+        <button onClick={() => auth.signOut()} className="text-xs font-bold text-red-300">SAIR</button>
       </nav>
 
-      {/* Renderização das Telas */}
-      {pagina === 'registro' && <Registro />}
-      {pagina === 'login' && <Login />}
-      {pagina === 'leads' && <NovoLeadForm />}
-      {pagina === 'admin' && <AdminLogs />}
-      {pagina === 'lista' && <ListaLeads />}
+      {/* TROCA DE TELAS */}
+      <main className="p-4">
+        {pagina === 'login' && <Login />}
+        {pagina === 'registro' && <Registro />}
+        {pagina === 'lista' && <ListaLeads />}
+        {pagina === 'novo' && <NovoLeadForm />}
+        {pagina === 'admin' && <AdminLogs />}
+      </main>
     </div>
   );
 }
