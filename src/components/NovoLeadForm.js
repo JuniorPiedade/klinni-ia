@@ -20,7 +20,7 @@ export const NovoLeadForm = () => {
       const infoGeo = classificarPorBairro(bairro);
 
       // 2. Inteligência de Vendas (Gemini)
-      const scriptIA = await gerarSugestaoVenda(nome, "Objeção Geral", notas, infoGeo.categoria);
+     const scriptIA = "Script temporário (IA desativada)";
 
       // 3. Salvando no Banco de Dados (Firebase)
       await addDoc(collection(db, "leads"), {
