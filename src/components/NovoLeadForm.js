@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { classificarPorBairro } from '../utils/geoClassifier';
 
 export const NovoLeadForm = () => {
   const [nome, setNome] = useState('');
@@ -15,27 +14,23 @@ export const NovoLeadForm = () => {
     setLoading(true);
 
     try {
-      // 1. Classificação Geográfica Automática (Salvador)
-      const infoGeo = classificarPorBairro(bairro);
+      // Classificação Simples (Salvador) - Direto no código para não dar erro
+      const bairrosNobres = ['pituba', 'horto', 'vitoria', 'caminho das arvores', 'barra', 'rio vermelho', 'graca'];
+      const eNobre = bairrosNobres.includes(bairro.toLowerCase().trim());
+      const categoria = eNobre ? 'HIGH TICKET' : 'TICKET MÉDIO';
 
-      // 2. IA DESATIVADA (temporário para build funcionar)
-      const scriptIA = "Script temporário (IA desativada)";
-
-      // 3. Salvando no Banco de Dados (Firebase)
       await addDoc(collection(db, "leads"), {
         nome,
         whatsapp,
         bairro,
         notas,
-        categoria: infoGeo.categoria,
-        scriptSugerido: scriptIA,
+        categoria,
         status: 'NOVO LEAD',
         criadoEm: serverTimestamp()
       });
 
-      alert(`✅ Sucesso! Lead ${infoGeo.categoria} cadastrado.`);
+      alert(`✅ Sucesso! Lead ${categoria} cadastrado.`);
       
-      // Limpar formulário
       setNome('');
       setWhatsapp('');
       setBairro('');
@@ -43,62 +38,22 @@ export const NovoLeadForm = () => {
 
     } catch (error) {
       console.error(error);
-      alert("Erro ao salvar. Verifique se o Firebase está conectado.");
+      alert("Erro ao salvar. Verifique a conexão.");
     }
-
     setLoading(false);
   };
 
   return (
-    <div className="bg-[#F4F7F6] p-8 min-h-screen font-inter flex items-center justify-center">
-      <form onSubmit={salvarLead} className="max-w-md w-full bg-white p-8 rounded-[16px] shadow-sm border border-[#E5EAE9]">
-        <h2 className="text-[#9BB8CD] text-2xl font-bold mb-6">
-          Klinni IA - Cadastro
-        </h2>
-        
-        <div className="space-y-4">
-          <input 
-            value={nome} 
-            onChange={(e) => setNome(e.target.value)} 
-            type="text" 
-            placeholder="Nome do Paciente" 
-            className="w-full p-3 rounded-lg border border-gray-200 outline-none focus:ring-2 focus:ring-[#7FA9D1]" 
-            required 
-          />
-
-          <input 
-            value={whatsapp} 
-            onChange={(e) => setWhatsapp(e.target.value)} 
-            type="text" 
-            placeholder="WhatsApp" 
-            className="w-full p-3 rounded-lg border border-gray-200 outline-none" 
-            required 
-          />
-
-          <input 
-            value={bairro} 
-            onChange={(e) => setBairro(e.target.value)} 
-            type="text" 
-            placeholder="Bairro (Salvador)" 
-            className="w-full p-3 rounded-lg border border-gray-200 outline-none" 
-            required 
-          />
-          
-          <textarea 
-            value={notas} 
-            onChange={(e) => setNotas(e.target.value)}
-            placeholder="Perfil do Paciente (Ex: Medo de dor, pressa, busca estética natural...)" 
-            className="w-full p-3 rounded-lg border border-gray-200 h-32 outline-none"
-          />
-
-          <button 
-            type="submit" 
-            disabled={loading}
-            className="w-full bg-gradient-to-r from-[#7FA9D1] to-[#9BB8CD] text-white p-4 rounded-lg font-bold shadow-md hover:opacity-90 disabled:bg-gray-300"
-          >
-            {loading ? "Processando..." : "✨ Cadastrar Lead"}
-          </button>
-        </div>
+    <div className="p-4 max-w-md mx-auto bg-white rounded-xl shadow-md border border-gray-100">
+      <h2 className="text-[#9BB8CD] text-xl font-bold mb-4">Novo Lead - Klinni IA</h2>
+      <form onSubmit={salvarLead} className="space-y-3">
+        <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do Paciente" className="w-full p-2 border rounded" required />
+        <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="WhatsApp" className="w-full p-2 border rounded" required />
+        <input value={bairro} onChange={(e) => setBairro(e.target.value)} placeholder="Bairro (Salvador)" className="w-full p-2 border rounded" required />
+        <textarea value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Observações" className="w-full p-2 border rounded h-24" />
+        <button type="submit" disabled={loading} className="w-full bg-[#7FA9D1] text-white p-3 rounded-lg font-bold">
+          {loading ? "Salvando..." : "Cadastrar Lead"}
+        </button>
       </form>
     </div>
   );
