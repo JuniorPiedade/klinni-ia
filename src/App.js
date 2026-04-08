@@ -32,6 +32,9 @@ function App() {
   const [cepLead, setCepLead] = useState('');
   const [idadeLead, setIdadeLead] = useState('');
 
+  // --- NOVO ESTADO PARA MENSAGEM DE SUCESSO ---
+  const [showSuccess, setShowSuccess] = useState(false);
+
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
     return () => unsubscribe();
@@ -54,7 +57,6 @@ function App() {
 
   const handleNovoLead = async (e) => {
     e.preventDefault();
-    // Lógica de Triagem Inteligente
     const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
     const categoria = (nobres.includes(cepLead.substring(0, 5)) && parseInt(idadeLead) >= 20) ? "HIGH TICKET" : "Ticket Médio";
     
@@ -63,12 +65,20 @@ function App() {
         nome: nomeLead, cep: cepLead, idade: idadeLead, categoria,
         status: "NOVO LEAD", userId: user.uid, createdAt: new Date()
       });
-      setView('dashboard'); // Volta para a dash após salvar
+      
+      // --- LÓGICA DA MENSAGEM DE CONFIRMAÇÃO ---
+      setShowSuccess(true);
       setNomeLead(''); setCepLead(''); setIdadeLead('');
+      
+      // Esconde a mensagem e volta para dash após 2 segundos
+      setTimeout(() => {
+        setShowSuccess(false);
+        setView('dashboard');
+      }, 2000);
+
     } catch (err) { alert("Erro ao salvar lead."); }
   };
 
-  // --- LÓGICA DO DASHBOARD VISUAL ---
   const totalLeads = leads.length;
   const highTicketLeads = leads.filter(l => l.categoria === 'HIGH TICKET').length;
   const porcentagemHigh = totalLeads > 0 ? Math.round((highTicketLeads / totalLeads) * 100) : 0;
@@ -111,7 +121,6 @@ function App() {
               <p style={st.mainSub}>Salvador, BA</p>
             </div>
 
-            {/* --- ÁREA DE GRÁFICOS E KPIs --- */}
             <div style={st.kpiRow}>
               <div style={st.kpiCard}>
                 <span style={st.kpiLabel}>Base Total</span>
@@ -124,7 +133,6 @@ function App() {
                 <span style={st.kpiSub}>Leads High Ticket</span>
               </div>
               
-              {/* --- GRÁFICO DE ROSCA EM CSS --- */}
               <div style={st.chartCard}>
                 <h4 style={st.chartTitle}>Qualificação da Base</h4>
                 <div style={st.chartFlex}>
@@ -139,7 +147,6 @@ function App() {
               </div>
             </div>
 
-            {/* --- LISTA DE LEADS (Visual Antigo) --- */}
             <h3 style={{marginTop:'40px', marginBottom:'20px', color: '#1e293b'}}>Últimas Oportunidades</h3>
             <div style={st.grid}>
               {leads.length === 0 ? (
@@ -165,14 +172,25 @@ function App() {
         ) : (
           <div style={st.formWrapper}>
             <div style={st.formCard}>
-              <h2 style={{marginBottom:'25px', color: '#1e293b'}}>Cadastrar Oportunidade</h2>
-              <form onSubmit={handleNovoLead} style={st.form}>
-                <input placeholder="Nome Completo do Paciente" style={st.input} value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required />
-                <input placeholder="CEP (ex: 40140000)" style={st.input} value={cepLead} onChange={e=>setCepLead(e.target.value)} required />
-                <input placeholder="Idade" type="number" style={st.input} value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} required />
-                <button type="submit" style={st.btnPrimary}>Classificar com IA</button>
-                <button type="button" onClick={()=>setView('dashboard')} style={st.btnLink}>Voltar</button>
-              </form>
+              {/* EXIBIÇÃO DA MENSAGEM DE SUCESSO */}
+              {showSuccess ? (
+                <div style={st.successMessage}>
+                  <div style={st.successIcon}>✓</div>
+                  <h2 style={{color: '#065f46'}}>Lead Criado com Sucesso!</h2>
+                  <p style={{color: '#047857'}}>A triagem IA já classificou o paciente.</p>
+                </div>
+              ) : (
+                <>
+                  <h2 style={{marginBottom:'25px', color: '#1e293b'}}>Cadastrar Oportunidade</h2>
+                  <form onSubmit={handleNovoLead} style={st.form}>
+                    <input placeholder="Nome Completo do Paciente" style={st.input} value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required />
+                    <input placeholder="CEP (ex: 40140000)" style={st.input} value={cepLead} onChange={e=>setCepLead(e.target.value)} required />
+                    <input placeholder="Idade" type="number" style={st.input} value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} required />
+                    <button type="submit" style={st.btnPrimary}>Classificar com IA</button>
+                    <button type="button" onClick={()=>setView('dashboard')} style={st.btnLink}>Voltar</button>
+                  </form>
+                </>
+              )}
             </div>
           </div>
         )}
@@ -182,6 +200,7 @@ function App() {
 }
 
 const st = {
+  // ... (Todos os estilos anteriores mantidos iguais) ...
   fullPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif', background: '#f8fafc', color: '#0070f3' },
   authPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #0070f3 0%, #1e293b 100%)' },
   authCard: { background: '#fff', padding: '50px', borderRadius: '30px', textAlign: 'center', width: '380px', boxShadow: '0 20px 50px rgba(0,0,0,0.15)' },
@@ -198,8 +217,6 @@ const st = {
   welcomeArea: { marginBottom: '40px' },
   mainTitle: { fontSize: '32px', color: '#1e293b', marginBottom: '5px', fontWeight: '800' },
   mainSub: { color: '#64748b', fontSize: '16px' },
-  
-  // KPI Styles
   kpiRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '30px' },
   kpiCard: { background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' },
   kpiCardGold: { background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(212,175,55,0.1)', border: '2px solid #fbbf24' },
@@ -207,8 +224,6 @@ const st = {
   kpiValue: { display: 'block', color: '#0070f3', fontSize: '48px', fontWeight: '800', marginBottom: '5px' },
   kpiValueGold: { display: 'block', color: '#d4af37', fontSize: '48px', fontWeight: '800', marginBottom: '5px' },
   kpiSub: { color: '#94a3b8', fontSize: '13px' },
-  
-  // Donut Chart CSS
   chartCard: { background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' },
   chartTitle: { color: '#1e293b', marginBottom: '15px', fontSize: '16px' },
   chartFlex: { display: 'flex', alignItems: 'center', gap: '20px' },
@@ -218,8 +233,6 @@ const st = {
   legendItem: { display: 'flex', alignItems: 'center', gap: '8px' },
   dotGold: { width: '10px', height: '10px', background: '#d4af37', borderRadius: '50%' },
   dotBlue: { width: '10px', height: '10px', background: '#eff6ff', borderRadius: '50%', border: '1px solid #d4af37' },
-
-  // Leads Grid
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' },
   card: { background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' },
   cardHigh: { background: '#fff', padding: '25px', borderRadius: '20px', border: '2px solid #fbbf24', boxShadow: '0 10px 25px rgba(251,191,36,0.1)', position: 'relative' },
@@ -230,14 +243,16 @@ const st = {
   leadName: { fontSize: '22px', color: '#1e293b', marginBottom: '10px', fontWeight: '700' },
   leadMeta: { display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '14px' },
   emptyCard: { gridColumn: '1/-1', textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '20px', border: '2px dashed #e2e8f0', color: '#64748b' },
-  
-  // Form
   formWrapper: { display: 'flex', justifyContent: 'center', paddingTop: '30px' },
-  formCard: { background: '#fff', padding: '45px', borderRadius: '30px', width: '100%', maxWidth: '480px', boxShadow: '0 15px 35px rgba(0,0,0,0.05)' },
+  formCard: { background: '#fff', padding: '45px', borderRadius: '30px', width: '100%', maxWidth: '480px', boxShadow: '0 15px 35px rgba(0,0,0,0.05)', textAlign: 'center' },
   form: { display: 'flex', flexDirection: 'column', gap: '18px' },
-  input: { padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '16px' },
+  input: { padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '16px', textAlign: 'left' },
   btnPrimary: { padding: '16px', borderRadius: '12px', border: 'none', background: '#0070f3', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 12px rgba(0,112,243,0.3)' },
-  btnLink: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', marginTop: '10px', fontSize: '15px' }
+  btnLink: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', marginTop: '10px', fontSize: '15px' },
+  
+  // NOVOS ESTILOS PARA CONFIRMAÇÃO
+  successMessage: { padding: '20px', animation: 'fadeIn 0.5s ease' },
+  successIcon: { width: '60px', height: '60px', background: '#d1fae5', color: '#059669', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '30px', margin: '0 auto 20px auto', fontWeight: 'bold' }
 };
 
 export default App;
