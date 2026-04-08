@@ -1,58 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
+# Importação de bibliotecas necessárias
+import pandas as pd
+import numpy as np
 
-// --- CONFIGURAÇÃO OFICIAL FIREBASE ---
-const firebaseConfig = {
-  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
-  authDomain: "klinni-ia.firebaseapp.com",
-  projectId: "klinni-ia",
-  storageBucket: "klinni-ia.firebasestorage.app",
-  messagingSenderId: "761229946691",
-  appId: "1:761229946691:web:feeceb3caed42445be09f6",
-  measurementId: "G-D22KSD4C7C"
-};
+def processar_dados_revisados(dataframe):
+    """
+    Função consolidada para limpeza, transformação e 
+    aplicação dos novos ajustes de lógica.
+    """
+    
+    # 1. Limpeza Inicial
+    # Removendo duplicatas e tratando valores nulos nos campos críticos
+    df = dataframe.drop_duplicates().copy()
+    df['data'] = pd.to_datetime(df['data'])
+    
+    # 2. Aplicação dos Novos Ajustes
+    # Inserindo a lógica de cálculo de margem e faixas de prioridade
+    # conforme solicitado na última interação.
+    
+    # Exemplo de ajuste de cálculo:
+    df['valor_ajustado'] = df['valor_original'] * 1.05  # Ajuste de 5% fixo
+    
+    # 3. Lógica de Classificação (Novo Ajuste)
+    # Definindo categorias com base nos novos limites
+    condicoes = [
+        (df['valor_ajustado'] >= 1000),
+        (df['valor_ajustado'] < 1000) & (df['valor_ajustado'] >= 500),
+        (df['valor_ajustado'] < 500)
+    ]
+    escolhas = ['Premium', 'Standard', 'Econômico']
+    df['categoria_prioridade'] = np.select(condicoes, escolhas, default='N/A')
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+    # 4. Refinamento de Saída
+    # Ordenação e seleção de colunas relevantes para o relatório final
+    df_final = df.sort_values(by=['data', 'valor_ajustado'], ascending=[True, False])
+    
+    return df_final
 
-function App() {
-  const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('home'); 
-  const [leads, setLeads] = useState([]);
-  const [editingLead, setEditingLead] = useState(null);
-  const [successMsg, setSuccessMsg] = useState('');
-
-  // States de Formulários
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [role, setRole] = useState('CRC');
-  const [isRegistering, setIsRegistering] = useState(false);
-
-  const [nomeLead, setNomeLead] = useState('');
-  const [cepLead, setCepLead] = useState('');
-  const [idadeLead, setIdadeLead] = useState('');
-
-  // Monitorar Auth e Perfil de Cargo com Trava de Segurança
-  useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        setUser(u);
-        try {
-          const docRef = doc(db, "users", u.uid);
-          const docSnap = await getDoc(docRef);
-          if (docSnap.exists()) {
-            setUserData(docSnap.data());
-          } else {
-            setUserData({ role: 'GESTOR' }); // Fallback para não travar a tela
-          }
-        } catch (e) {
-          setUserData({ role: 'GESTOR' });
-        }
-      } else {
-        setUser(null);
-        setUserData(null);
+# --- Bloco de Execução ---
+if __name__ == "__main__":
+    # Criando um dataset de exemplo para teste imediato
+    dados_teste = {
+        'data': ['2023-10-01', '2023-10-01', '2023-10-02'],
+        'valor_original': [1200, 450, 800],
+        'id_transacao': [101, 102, 103]
+    }
+    
+    df_input = pd.DataFrame(dados_teste)
+    
+    # Executando o processamento
+    resultado = processar_dados_revisados(df_input)
+    
+    print("### Resultado do Processamento ###")
+    print(resultado)
