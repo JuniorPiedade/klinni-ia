@@ -24,6 +24,7 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   
+  // States de entrada
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isRegistering, setIsRegistering] = useState(false);
@@ -32,8 +33,9 @@ export default function App() {
   const [idadeLead, setIdadeLead] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // State da Notificação (Toast)
-  const [toast, setToast] = useState({ show: false, message: '' });
+  // ESTADO DO AVISO (Gatilho mestre)
+  const [showToast, setShowToast] = useState(false);
+  const [toastMsg, setToastMsg] = useState('');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
@@ -51,7 +53,7 @@ export default function App() {
     try {
       if (isRegistering) await createUserWithEmailAndPassword(auth, email, password);
       else await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) { alert("Acesso negado."); }
+    } catch (err) { alert("Erro de acesso."); }
   };
 
   const handleNovoLead = async (e) => {
@@ -63,112 +65,99 @@ export default function App() {
     const categoria = (nobres.includes(cepLead.substring(0, 5)) && parseInt(idadeLead) >= 20) ? "HIGH TICKET" : "Ticket Médio";
     
     try {
+      // 1. SALVA NO FIREBASE
       await addDoc(collection(db, "leads"), {
         nome: nomeLead, cep: cepLead, idade: idadeLead, categoria,
         status: "NOVO LEAD", userId: user.uid, createdAt: serverTimestamp()
       });
 
-      // 1. DISPARA O TOAST PRIMEIRO
-      setToast({ show: true, message: `Lead ${nomeLead} triado com sucesso!` });
-      
-      // 2. LIMPA OS CAMPOS
+      // 2. DISPARA O AVISO IMEDIATAMENTE
+      setToastMsg(`Sucesso! ${nomeLead} foi classificado.`);
+      setShowToast(true);
+
+      // 3. LIMPA OS INPUTS MAS MANTÉM NA TELA POR 2 SEGUNDOS
       setNomeLead(''); setCepLead(''); setIdadeLead('');
       
-      // 3. AGUARDA 3 SEGUNDOS PARA O USUÁRIO VER E ENTÃO FECHA E MUDA DE TELA
       setTimeout(() => {
-        setToast({ show: false, message: '' });
+        setShowToast(false);
         setView('dashboard');
-      }, 3000);
+      }, 2500);
 
     } catch (err) {
-      alert("Erro ao salvar.");
+      alert("Erro ao salvar lead.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const highTicketLeads = leads.filter(l => l.categoria === 'HIGH TICKET').length;
-  const porcentagemHigh = leads.length > 0 ? Math.round((highTicketLeads / leads.length) * 100) : 0;
-
-  if (loading) return <div style={st.fullPage}>KLINNI IA...</div>;
+  if (loading) return <div style={{display:'flex', height:'100vh', alignItems:'center', justifyContent:'center'}}>KLINNI IA...</div>;
 
   return (
-    <div style={st.dashboardWrapper}>
+    <div style={{ minHeight: '100vh', background: '#f1f5f9', fontFamily: 'sans-serif' }}>
       
-      {/* TOAST GLASSMORPHISM - POSIÇÃO ABSOLUTA NO TOPO DO APP */}
-      {toast.show && (
-        <div style={st.toastWrapper}>
-          <div style={st.toastGlass}>
-            <div style={st.toastCheck}>✓</div>
-            <span style={st.toastText}>{toast.message}</span>
-          </div>
+      {/* AVISO GERAL (FORA DE QUALQUER DIV DE CONTEÚDO) */}
+      {showToast && (
+        <div style={{
+          position: 'fixed', top: '20px', right: '20px', zIndex: 10000,
+          background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)',
+          padding: '15px 25px', borderRadius: '15px', display: 'flex', alignItems: 'center',
+          gap: '12px', border: '1px solid rgba(255,255,255,0.4)', boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+        }}>
+          <div style={{width:'24px', height:'24px', background:'#22c55e', borderRadius:'50%', color:'#fff', display:'flex', justifyContent:'center', alignItems:'center', fontWeight:'bold'}}>✓</div>
+          <span style={{color: '#1e293b', fontWeight: '700'}}>{toastMsg}</span>
         </div>
       )}
 
       {!user ? (
-        <div style={st.authPage}>
-          <div style={st.authCard}>
-            <h1 style={st.logoText}>KLINNI <span style={{fontWeight:'300'}}>IA</span></h1>
-            <form onSubmit={handleAuth} style={st.form}>
-              <input type="email" placeholder="E-mail" style={st.input} onChange={e=>setEmail(e.target.value)} required />
-              <input type="password" placeholder="Senha" style={st.input} onChange={e=>setPassword(e.target.value)} required />
-              <button style={st.btnPrimary}>{isRegistering ? 'Criar Conta' : 'Acessar'}</button>
+        <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0070f3'}}>
+          <div style={{background:'#fff', padding:'40px', borderRadius:'25px', textAlign:'center', width:'300px'}}>
+            <h1 style={{color:'#0070f3', marginBottom:'20px'}}>KLINNI <span>IA</span></h1>
+            <form onSubmit={handleAuth} style={{display:'flex', flexDirection:'column', gap:'15px'}}>
+              <input type="email" placeholder="E-mail" style={{padding:'12px', borderRadius:'10px', border:'1px solid #ddd'}} onChange={e=>setEmail(e.target.value)} required />
+              <input type="password" placeholder="Senha" style={{padding:'12px', borderRadius:'10px', border:'1px solid #ddd'}} onChange={e=>setPassword(e.target.value)} required />
+              <button style={{padding:'12px', borderRadius:'10px', background:'#0070f3', color:'#fff', border:'none', fontWeight:'bold'}}>Entrar</button>
             </form>
-            <button onClick={()=>setIsRegistering(!isRegistering)} style={st.btnLink}>
-              {isRegistering ? 'Voltar' : 'Cadastrar'}
-            </button>
           </div>
         </div>
       ) : (
         <>
-          <nav style={st.nav}>
-            <div style={st.logoTextNav}>KLINNI <span style={{fontWeight:'300'}}>IA</span></div>
-            <div style={st.navActions}>
-              <button onClick={()=>setView('dashboard')} style={view==='dashboard'?st.navBtnActive:st.navBtn}>Dashboard</button>
-              <button onClick={()=>setView('novoLead')} style={view==='novoLead'?st.navBtnActive:st.navBtn}>+ Novo Lead</button>
-              <button onClick={()=>signOut(auth)} style={st.btnSair}>Sair</button>
+          <nav style={{display:'flex', justifyContent:'space-between', padding:'15px 50px', background:'#fff', alignItems:'center'}}>
+            <h2 style={{color:'#0070f3', fontWeight:'800'}}>KLINNI <span style={{fontWeight:'300'}}>IA</span></h2>
+            <div style={{display:'flex', gap:'20px'}}>
+              <button onClick={()=>setView('dashboard')} style={{background:'none', border:'none', cursor:'pointer', fontWeight: view==='dashboard'?'800':'400'}}>Dashboard</button>
+              <button onClick={()=>setView('novoLead')} style={{background:'none', border:'none', cursor:'pointer', fontWeight: view==='novoLead'?'800':'400'}}>+ Novo Lead</button>
+              <button onClick={()=>signOut(auth)} style={{color:'red', border:'none', background:'none', cursor:'pointer'}}>Sair</button>
             </div>
           </nav>
 
-          <main style={st.main}>
+          <main style={{padding:'40px 50px'}}>
             {view === 'dashboard' ? (
-              <>
-                <h2 style={st.mainTitle}>Performance Salvador</h2>
-                <div style={st.kpiRow}>
-                  <div style={st.kpiCard}><span style={st.kpiLabel}>Base</span><span style={st.kpiValue}>{leads.length}</span></div>
-                  <div style={st.kpiCardGold}><span style={st.kpiLabel}>High Ticket</span><span style={st.kpiValueGold}>{highTicketLeads}</span></div>
-                  <div style={st.chartCard}>
-                    <div style={{...st.donut, backgroundImage: `conic-gradient(#d4af37 ${porcentagemHigh}%, #eff6ff ${porcentagemHigh}%)`}}>
-                      <div style={st.donutCenter}>{porcentagemHigh}%</div>
-                    </div>
-                  </div>
+              <div>
+                <div style={{display:'flex', gap:'20px', marginBottom:'30px'}}>
+                  <div style={{background:'#fff', padding:'20px', borderRadius:'15px', flex:1}}>Total: {leads.length}</div>
+                  <div style={{background:'#fff', padding:'20px', borderRadius:'15px', flex:1, border:'1px solid gold'}}>High Ticket: {leads.filter(l=>l.categoria==='HIGH TICKET').length}</div>
                 </div>
-
-                <div style={st.grid}>
+                <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px'}}>
                   {leads.map(l => (
-                    <div key={l.id} style={l.categoria==='HIGH TICKET'?st.cardHigh:st.card}>
-                      <div style={st.cardHeader}>
-                        <span style={st.tag}>{l.status}</span>
-                        <span style={l.categoria==='HIGH TICKET'?st.badgeGold:st.badge}>{l.categoria}</span>
-                      </div>
-                      <h3 style={st.leadName}>{l.nome}</h3>
-                      <div style={st.leadMeta}><span>📍 {l.cep}</span><span>🎂 {l.idade} anos</span></div>
+                    <div key={l.id} style={{background:'#fff', padding:'20px', borderRadius:'15px', border: l.categoria==='HIGH TICKET'?'2px solid gold':'1px solid #eee'}}>
+                      <span style={{fontSize:'10px', fontWeight:'bold', color:'#0070f3'}}>{l.categoria}</span>
+                      <h3 style={{margin:'10px 0'}}>{l.nome}</h3>
+                      <p style={{fontSize:'12px', color:'#666'}}>📍 {l.cep} | 🎂 {l.idade} anos</p>
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             ) : (
-              <div style={st.formWrapper}>
-                <div style={st.formCard}>
-                  <h2 style={{marginBottom:'25px'}}>Novo Lead</h2>
-                  <form onSubmit={handleNovoLead} style={st.form}>
-                    <input placeholder="Nome" style={st.input} value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required />
-                    <input placeholder="CEP" style={st.input} value={cepLead} onChange={e=>setCepLead(e.target.value)} required />
-                    <input placeholder="Idade" type="number" style={st.input} value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} required />
-                    <button type="submit" style={st.btnPrimary} disabled={isSaving}>
-                      {isSaving ? 'Registrando...' : 'Classificar com IA'}
+              <div style={{display:'flex', justifyContent:'center'}}>
+                <div style={{background:'#fff', padding:'40px', borderRadius:'25px', width:'400px'}}>
+                  <h2 style={{marginBottom:'20px'}}>Novo Lead</h2>
+                  <form onSubmit={handleNovoLead} style={{display:'flex', flexDirection:'column', gap:'15px'}}>
+                    <input placeholder="Nome" style={{padding:'12px', borderRadius:'10px', border:'1px solid #ddd'}} value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required />
+                    <input placeholder="CEP" style={{padding:'12px', borderRadius:'10px', border:'1px solid #ddd'}} value={cepLead} onChange={e=>setCepLead(e.target.value)} required />
+                    <input placeholder="Idade" type="number" style={{padding:'12px', borderRadius:'10px', border:'1px solid #ddd'}} value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} required />
+                    <button type="submit" disabled={isSaving} style={{padding:'12px', borderRadius:'10px', background:'#0070f3', color:'#fff', border:'none', fontWeight:'bold'}}>
+                      {isSaving ? 'Salvando...' : 'Classificar Lead'}
                     </button>
-                    <button type="button" onClick={()=>setView('dashboard')} style={st.btnLink}>Cancelar</button>
                   </form>
                 </div>
               </div>
@@ -179,78 +168,3 @@ export default function App() {
     </div>
   );
 }
-
-const st = {
-  // CONFIGURAÇÃO DE UI MANTIDA
-  fullPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif', background: '#f8fafc' },
-  authPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0070f3', width: '100%' },
-  authCard: { background: '#fff', padding: '50px', borderRadius: '30px', width: '350px', textAlign: 'center' },
-  logoText: { color: '#0070f3', fontSize: '38px', fontWeight: '800' },
-  dashboardWrapper: { minHeight: '100vh', background: '#f1f5f9', fontFamily: 'sans-serif', position: 'relative' },
-  nav: { display: 'flex', justifyContent: 'space-between', padding: '20px 60px', background: '#fff', alignItems: 'center', borderBottom: '1px solid #e2e8f0' },
-  logoTextNav: { fontSize: '24px', fontWeight: '800', color: '#0070f3' },
-  navActions: { display: 'flex', gap: '30px', alignItems: 'center' },
-  navBtn: { border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' },
-  navBtnActive: { border: 'none', background: 'none', color: '#0070f3', fontWeight: '800', borderBottom: '2px solid #0070f3' },
-  btnSair: { color: '#ef4444', border: '1px solid #fee2e2', background: '#fff', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer' },
-  main: { padding: '50px 60px' },
-  mainTitle: { fontSize: '32px', color: '#1e293b', fontWeight: '800', marginBottom: '30px' },
-  kpiRow: { display: 'flex', gap: '25px', marginBottom: '40px' },
-  kpiCard: { background: '#fff', padding: '25px', borderRadius: '20px', flex: 1, border: '1px solid #e2e8f0' },
-  kpiCardGold: { background: '#fff', padding: '25px', borderRadius: '20px', flex: 1, border: '2px solid #fbbf24' },
-  kpiLabel: { color: '#64748b', fontSize: '14px' },
-  kpiValue: { fontSize: '40px', fontWeight: '800', color: '#0070f3', display: 'block' },
-  kpiValueGold: { fontSize: '40px', fontWeight: '800', color: '#d4af37', display: 'block' },
-  chartCard: { background: '#fff', padding: '20px', borderRadius: '20px', display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0' },
-  donut: { width: '80px', height: '80px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  donutCenter: { width: '55px', height: '55px', background: '#fff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '800' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' },
-  card: { background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0' },
-  cardHigh: { background: '#fff', padding: '25px', borderRadius: '20px', border: '2px solid #fbbf24' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '15px' },
-  tag: { fontSize: '10px', fontWeight: '800', color: '#0070f3' },
-  badgeGold: { fontSize: '11px', color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px', fontWeight: '700' },
-  badge: { fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px' },
-  leadName: { fontSize: '22px', color: '#1e293b', fontWeight: '700' },
-  leadMeta: { display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '14px' },
-  formWrapper: { display: 'flex', justifyContent: 'center' },
-  formCard: { background: '#fff', padding: '50px', borderRadius: '30px', width: '450px', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' },
-  form: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  input: { padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' },
-  btnPrimary: { padding: '16px', borderRadius: '12px', border: 'none', background: '#0070f3', color: '#fff', fontWeight: '700', cursor: 'pointer' },
-  btnLink: { background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' },
-
-  // TOAST FIXADO NO TOPO (Z-INDEX MÁXIMO)
-  toastWrapper: { 
-    position: 'fixed', 
-    top: '40px', 
-    right: '40px', 
-    zIndex: 99999, // Força estar acima de tudo
-    pointerEvents: 'none' 
-  },
-  toastGlass: {
-    display: 'flex', 
-    alignItems: 'center', 
-    gap: '15px', 
-    padding: '16px 28px',
-    background: 'rgba(255, 255, 255, 0.85)', 
-    backdropFilter: 'blur(15px)',
-    borderRadius: '24px', 
-    border: '1px solid rgba(255, 255, 255, 0.6)',
-    boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
-    pointerEvents: 'auto'
-  },
-  toastCheck: { 
-    width: '30px', 
-    height: '30px', 
-    background: '#10b981', 
-    color: '#fff', 
-    borderRadius: '50%', 
-    display: 'flex', 
-    justifyContent: 'center', 
-    alignItems: 'center', 
-    fontSize: '16px', 
-    fontWeight: 'bold' 
-  },
-  toastText: { color: '#1e293b', fontWeight: '700', fontSize: '16px' }
-};
