@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy } from "firebase/firestore";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, doc, updateDoc, setDoc, getDoc } from "firebase/firestore";
 
-// --- CONFIGURAÇÃO OFICIAL KLINNI IA ---
+// --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
   authDomain: "klinni-ia.firebaseapp.com",
@@ -20,26 +20,44 @@ const db = getFirestore(app);
 
 function App() {
   const [user, setUser] = useState(null);
+  const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('dashboard');
+  const [view, setView] = useState('home'); 
   const [leads, setLeads] = useState([]);
+  const [editingLead, setEditingLead] = useState(null);
+  const [successMsg, setSuccessMsg] = useState('');
+
+  // States de Formulários
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [role, setRole] = useState('CRC');
   const [isRegistering, setIsRegistering] = useState(false);
-  
-  // States para Novo Lead
+
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
   const [idadeLead, setIdadeLead] = useState('');
 
+  // Monitorar Auth e Perfil de Cargo
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
+    const unsubscribe = onAuthStateChanged(auth, async (u) => {
+      if (u) {
+        const docRef = doc(db, "users", u.uid);
+        const docSnap = await getDoc(docRef);
+        if (docSnap.exists()) setUserData(docSnap.data());
+        setUser(u);
+      } else {
+        setUser(null);
+        setUserData(null);
+      }
+      setLoading(false);
+    });
     return () => unsubscribe();
   }, []);
 
+  // Monitorar Leads em tempo real
   useEffect(() => {
     if (user) {
-      const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+      const q = query(collection(db, "leads"), where("ownerId", "==", user.uid), orderBy("createdAt", "desc"));
       return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
     }
   }, [user]);
@@ -47,133 +65,148 @@ function App() {
   const handleAuth = async (e) => {
     e.preventDefault();
     try {
-      if (isRegistering) await createUserWithEmailAndPassword(auth, email, password);
-      else await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) { alert("Acesso negado: Verifique seus dados."); }
+      if (isRegistering) {
+        const res = await createUserWithEmailAndPassword(auth, email, password);
+        await setDoc(doc(db, "users", res.user.uid), { email, role });
+        setUserData({ email, role });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+      }
+    } catch (err) { alert("Falha na autenticação."); }
   };
 
-  const handleNovoLead = async (e) => {
+  const saveLead = async (e) => {
     e.preventDefault();
-    // Lógica de Triagem Inteligente
-    const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
+    const nobres = ['40140', '41940', '40080', '41810', '41820'];
     const categoria = (nobres.includes(cepLead.substring(0, 5)) && parseInt(idadeLead) >= 20) ? "HIGH TICKET" : "Ticket Médio";
-    
+
     try {
-      await addDoc(collection(db, "leads"), {
-        nome: nomeLead, cep: cepLead, idade: idadeLead, categoria,
-        status: "NOVO LEAD", userId: user.uid, createdAt: new Date()
-      });
-      setView('dashboard'); // Volta para a dash após salvar
-      setNomeLead(''); setCepLead(''); setIdadeLead('');
-    } catch (err) { alert("Erro ao salvar lead."); }
+      if (editingLead) {
+        await updateDoc(doc(db, "leads", editingLead.id), { nome: nomeLead, cep: cepLead, idade: idadeLead, categoria });
+        setSuccessMsg("Lead atualizado com sucesso!");
+      } else {
+        await addDoc(collection(db, "leads"), {
+          nome: nomeLead, cep: cepLead, idade: idadeLead, categoria,
+          status: "PENDENTE", ownerId: user.uid, createdAt: new Date()
+        });
+        setSuccessMsg("Novo lead qualificado com sucesso!");
+      }
+      setTimeout(() => { setSuccessMsg(''); setView('dashboard'); }, 2000);
+      setNomeLead(''); setCepLead(''); setIdadeLead(''); setEditingLead(null);
+    } catch (err) { alert("Erro ao salvar."); }
   };
 
-  // --- LÓGICA DO DASHBOARD VISUAL ---
-  const totalLeads = leads.length;
-  const highTicketLeads = leads.filter(l => l.categoria === 'HIGH TICKET').length;
-  const porcentagemHigh = totalLeads > 0 ? Math.round((highTicketLeads / totalLeads) * 100) : 0;
+  const updateStatus = async (id, newStatus) => {
+    await updateDoc(doc(db, "leads", id), { status: newStatus });
+  };
 
-  if (loading) return <div style={st.fullPage}>Carregando Klinni...</div>;
+  const editLead = (lead) => {
+    setEditingLead(lead);
+    setNomeLead(lead.nome);
+    setCepLead(lead.cep);
+    setIdadeLead(lead.idade);
+    setView('novoLead');
+  };
+
+  // Cálculos da Dash
+  const total = leads.length;
+  const high = leads.filter(l => l.categoria === 'HIGH TICKET').length;
+  const percHigh = total > 0 ? Math.round((high / total) * 100) : 0;
+
+  if (loading) return <div style={st.fullPage}>Sincronizando Klinni IA...</div>;
 
   if (!user) return (
     <div style={st.authPage}>
       <div style={st.authCard}>
         <h1 style={st.logoText}>KLINNI <span style={{fontWeight:'300'}}>IA</span></h1>
-        <p style={st.authSub}>CRM Inteligente para Clínicas de Alto Padrão</p>
         <form onSubmit={handleAuth} style={st.form}>
-          <input type="email" placeholder="E-mail profissional" style={st.input} onChange={e=>setEmail(e.target.value)} required />
+          <input type="email" placeholder="E-mail" style={st.input} onChange={e=>setEmail(e.target.value)} required />
           <input type="password" placeholder="Senha" style={st.input} onChange={e=>setPassword(e.target.value)} required />
-          <button style={st.btnPrimary}>{isRegistering ? 'Criar minha conta' : 'Acessar Sistema'}</button>
+          {isRegistering && (
+            <select style={st.input} onChange={e=>setRole(e.target.value)}>
+              <option value="CRC">Cargo: CRC (Operacional)</option>
+              <option value="GESTOR">Cargo: GESTOR (Administrativo)</option>
+            </select>
+          )}
+          <button style={st.btnPrimary}>{isRegistering ? 'Cadastrar Colaborador' : 'Acessar CRM'}</button>
         </form>
         <button onClick={()=>setIsRegistering(!isRegistering)} style={st.btnLink}>
-          {isRegistering ? 'Já tenho acesso' : 'Não tem conta? Solicitar Cadastro'}
+          {isRegistering ? 'Voltar' : 'Criar novo acesso de cargo'}
         </button>
       </div>
     </div>
   );
 
   return (
-    <div style={st.dashboardWrapper}>
+    <div style={st.app}>
       <nav style={st.nav}>
-        <div style={st.logoTextNav}>KLINNI <span>IA</span></div>
+        <div style={st.logoNav} onClick={()=>setView('home')}>KLINNI <span>IA</span></div>
         <div style={st.navActions}>
-          <button onClick={()=>setView('dashboard')} style={view==='dashboard'?st.navBtnActive:st.navBtn}>Dashboard</button>
-          <button onClick={()=>setView('novoLead')} style={view==='novoLead'?st.navBtnActive:st.navBtn}>+ Novo Lead</button>
+          <button onClick={()=>setView('dashboard')} style={view==='dashboard'?st.active:st.navBtn}>Dashboard</button>
+          <button onClick={()=>setView('novoLead')} style={view==='novoLead'?st.active:st.navBtn}>+ Novo Lead</button>
           <button onClick={()=>signOut(auth)} style={st.btnSair}>Sair</button>
         </div>
       </nav>
 
       <main style={st.main}>
-        {view === 'dashboard' ? (
+        {successMsg && <div style={st.toast}>{successMsg}</div>}
+
+        {view === 'home' && (
+          <div style={st.home}>
+            <h1 style={st.title}>Olá, {userData?.role === 'GESTOR' ? 'Gestor' : 'Consultor CRC'} 🚀</h1>
+            <p style={st.sub}>"{userData?.role === 'GESTOR' ? 'Vamos organizar seus leads hoje?' : 'Pronto para bater as metas de vendas hoje?'}"</p>
+            <div style={st.homeGrid}>
+              <button style={st.homeCard} onClick={()=>setView('dashboard')}>📊 Acessar Dashboard</button>
+              <button style={st.homeCard} onClick={()=>setView('novoLead')}>➕ Cadastrar Lead</button>
+            </div>
+          </div>
+        )}
+
+        {view === 'dashboard' && (
           <>
-            <div style={st.welcomeArea}>
-              <h2 style={st.mainTitle}>Visão Geral da Operação</h2>
-              <p style={st.mainSub}>Salvador, BA</p>
-            </div>
-
-            {/* --- ÁREA DE GRÁFICOS E KPIs --- */}
             <div style={st.kpiRow}>
-              <div style={st.kpiCard}>
-                <span style={st.kpiLabel}>Base Total</span>
-                <span style={st.kpiValue}>{totalLeads}</span>
-                <span style={st.kpiSub}>Leads Cadastrados</span>
-              </div>
-              <div style={st.kpiCardGold}>
-                <span style={st.kpiLabel}>Potencial</span>
-                <span style={st.kpiValueGold}>{highTicketLeads}</span>
-                <span style={st.kpiSub}>Leads High Ticket</span>
-              </div>
-              
-              {/* --- GRÁFICO DE ROSCA EM CSS --- */}
-              <div style={st.chartCard}>
-                <h4 style={st.chartTitle}>Qualificação da Base</h4>
-                <div style={st.chartFlex}>
-                  <div style={{...st.donut, backgroundImage: `conic-gradient(#d4af37 ${porcentagemHigh}%, #eff6ff ${porcentagemHigh}%)`}}>
-                    <div style={st.donutCenter}>{porcentagemHigh}%</div>
-                  </div>
-                  <div style={st.chartLegend}>
-                    <div style={st.legendItem}><span style={st.dotGold}></span> High Ticket</div>
-                    <div style={st.legendItem}><span style={st.dotBlue}></span> Ticket Médio</div>
-                  </div>
+              <div style={st.kpi}><span>Leads</span><strong>{total}</strong></div>
+              <div style={st.kpiGold}><span>High Ticket</span><strong>{high}</strong></div>
+              <div style={st.chart}>
+                <div style={{...st.donut, backgroundImage: `conic-gradient(#d4af37 ${percHigh}%, #e2e8f0 ${percHigh}%)`}}>
+                  <div style={st.donutIn}>{percHigh}%</div>
                 </div>
+                <small>Qualificação</small>
               </div>
             </div>
 
-            {/* --- LISTA DE LEADS (Visual Antigo) --- */}
-            <h3 style={{marginTop:'40px', marginBottom:'20px', color: '#1e293b'}}>Últimas Oportunidades</h3>
             <div style={st.grid}>
-              {leads.length === 0 ? (
-                <div style={st.emptyCard}>
-                  <h3>Nenhum lead em triagem</h3>
-                  <p>Inicie o cadastro no botão "+ Novo Lead".</p>
-                </div>
-              ) : leads.map(l => (
-                <div key={l.id} style={l.categoria==='HIGH TICKET'?st.cardHigh:st.card}>
-                  <div style={st.cardHeader}>
-                    <span style={st.tag}>{l.status}</span>
-                    <span style={l.categoria==='HIGH TICKET'?st.badgeGold:st.badge}>{l.categoria}</span>
+              {leads.map(l => (
+                <div key={l.id} style={l.categoria==='HIGH TICKET'?st.cardGold:st.card}>
+                  <div style={st.cardHead}>
+                    <select 
+                      style={{...st.statusSelect, backgroundColor: l.status==='EM TRATAMENTO'?'#22c55e':l.status==='PENDENTE'?'#eab308':'#000'}} 
+                      value={l.status} 
+                      onChange={(e)=>updateStatus(l.id, e.target.value)}
+                    >
+                      <option value="PENDENTE">🟡 PENDENTE</option>
+                      <option value="EM TRATAMENTO">🟢 TRATAMENTO</option>
+                      <option value="DESISTIU">⚫ DESISTIU</option>
+                    </select>
+                    <button onClick={()=>editLead(l)} style={st.editBtn}>✏️</button>
                   </div>
-                  <h3 style={st.leadName}>{l.nome}</h3>
-                  <div style={st.leadMeta}>
-                    <span>📍 CEP {l.cep}</span>
-                    <span>🎂 {l.idade} anos</span>
-                  </div>
+                  <h3>{l.nome}</h3>
+                  <small>📍 {l.cep} | {l.categoria}</small>
                 </div>
               ))}
             </div>
           </>
-        ) : (
-          <div style={st.formWrapper}>
-            <div style={st.formCard}>
-              <h2 style={{marginBottom:'25px', color: '#1e293b'}}>Cadastrar Oportunidade</h2>
-              <form onSubmit={handleNovoLead} style={st.form}>
-                <input placeholder="Nome Completo do Paciente" style={st.input} value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required />
-                <input placeholder="CEP (ex: 40140000)" style={st.input} value={cepLead} onChange={e=>setCepLead(e.target.value)} required />
-                <input placeholder="Idade" type="number" style={st.input} value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} required />
-                <button type="submit" style={st.btnPrimary}>Classificar com IA</button>
-                <button type="button" onClick={()=>setView('dashboard')} style={st.btnLink}>Voltar</button>
-              </form>
-            </div>
+        )}
+
+        {view === 'novoLead' && (
+          <div style={st.formBox}>
+            <h2>{editingLead ? 'Editar Cadastro' : 'Novo Cadastro Inteligente'}</h2>
+            <form onSubmit={saveLead} style={st.form}>
+              <input placeholder="Nome" style={st.input} value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required />
+              <input placeholder="CEP" style={st.input} value={cepLead} onChange={e=>setCepLead(e.target.value)} required />
+              <input placeholder="Idade" type="number" style={st.input} value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} required />
+              <button style={st.btnPrimary}>{editingLead ? 'Salvar Alterações' : 'Classificar com IA'}</button>
+            </form>
           </div>
         )}
       </main>
@@ -182,62 +215,40 @@ function App() {
 }
 
 const st = {
-  fullPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif', background: '#f8fafc', color: '#0070f3' },
-  authPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: 'linear-gradient(135deg, #0070f3 0%, #1e293b 100%)' },
-  authCard: { background: '#fff', padding: '50px', borderRadius: '30px', textAlign: 'center', width: '380px', boxShadow: '0 20px 50px rgba(0,0,0,0.15)' },
-  logoText: { color: '#0070f3', fontSize: '38px', marginBottom: '5px', letterSpacing: '-1.5px', fontWeight: '800' },
-  authSub: { color: '#64748b', marginBottom: '35px', fontSize: '15px' },
-  dashboardWrapper: { minHeight: '100vh', background: '#f1f5f9', fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif' },
-  nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 60px', background: 'rgba(255,255,255,0.9)', backdropFilter: 'blur(10px)', sticky: 'top', borderBottom: '1px solid #e2e8f0', zIndex: '1000' },
-  logoTextNav: { fontSize: '24px', fontWeight: '800', color: '#0070f3' },
-  navActions: { display: 'flex', gap: '25px', alignItems: 'center' },
-  navBtn: { border: 'none', background: 'none', color: '#64748b', fontWeight: '600', cursor: 'pointer', fontSize: '15px', padding: '10px 0' },
-  navBtnActive: { border: 'none', background: 'none', color: '#0070f3', fontWeight: '800', cursor: 'pointer', fontSize: '15px', borderBottom: '2px solid #0070f3', padding: '10px 0' },
-  btnSair: { color: '#ef4444', border: '1px solid #fee2e2', background: '#fff', padding: '8px 18px', borderRadius: '10px', cursor: 'pointer', fontWeight: '500' },
-  main: { padding: '50px 60px' },
-  welcomeArea: { marginBottom: '40px' },
-  mainTitle: { fontSize: '32px', color: '#1e293b', marginBottom: '5px', fontWeight: '800' },
-  mainSub: { color: '#64748b', fontSize: '16px' },
-  
-  // KPI Styles
-  kpiRow: { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '25px', marginBottom: '30px' },
-  kpiCard: { background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0' },
-  kpiCardGold: { background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 10px 25px rgba(212,175,55,0.1)', border: '2px solid #fbbf24' },
-  kpiLabel: { display: 'block', color: '#64748b', fontSize: '14px', fontWeight: '600', marginBottom: '10px', textTransform: 'uppercase' },
-  kpiValue: { display: 'block', color: '#0070f3', fontSize: '48px', fontWeight: '800', marginBottom: '5px' },
-  kpiValueGold: { display: 'block', color: '#d4af37', fontSize: '48px', fontWeight: '800', marginBottom: '5px' },
-  kpiSub: { color: '#94a3b8', fontSize: '13px' },
-  
-  // Donut Chart CSS
-  chartCard: { background: '#fff', padding: '25px', borderRadius: '20px', boxShadow: '0 5px 15px rgba(0,0,0,0.02)', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column' },
-  chartTitle: { color: '#1e293b', marginBottom: '15px', fontSize: '16px' },
-  chartFlex: { display: 'flex', alignItems: 'center', gap: '20px' },
-  donut: { width: '100px', height: '100px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', border: '1px solid #e2e8f0', transition: '0.5s' },
-  donutCenter: { width: '70px', height: '70px', background: '#fff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '800', fontSize: '20px', color: '#1e293b' },
-  chartLegend: { display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '13px', color: '#64748b' },
-  legendItem: { display: 'flex', alignItems: 'center', gap: '8px' },
-  dotGold: { width: '10px', height: '10px', background: '#d4af37', borderRadius: '50%' },
-  dotBlue: { width: '10px', height: '10px', background: '#eff6ff', borderRadius: '50%', border: '1px solid #d4af37' },
-
-  // Leads Grid
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' },
-  card: { background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' },
-  cardHigh: { background: '#fff', padding: '25px', borderRadius: '20px', border: '2px solid #fbbf24', boxShadow: '0 10px 25px rgba(251,191,36,0.1)', position: 'relative' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '15px' },
-  tag: { fontSize: '10px', fontWeight: '800', color: '#0070f3', background: '#eff6ff', padding: '4px 10px', borderRadius: '6px', textTransform: 'uppercase' },
-  badge: { fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px' },
-  badgeGold: { fontSize: '11px', color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px', fontWeight: '700' },
-  leadName: { fontSize: '22px', color: '#1e293b', marginBottom: '10px', fontWeight: '700' },
-  leadMeta: { display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '14px' },
-  emptyCard: { gridColumn: '1/-1', textAlign: 'center', padding: '60px', background: '#fff', borderRadius: '20px', border: '2px dashed #e2e8f0', color: '#64748b' },
-  
-  // Form
-  formWrapper: { display: 'flex', justifyContent: 'center', paddingTop: '30px' },
-  formCard: { background: '#fff', padding: '45px', borderRadius: '30px', width: '100%', maxWidth: '480px', boxShadow: '0 15px 35px rgba(0,0,0,0.05)' },
-  form: { display: 'flex', flexDirection: 'column', gap: '18px' },
-  input: { padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: '16px' },
-  btnPrimary: { padding: '16px', borderRadius: '12px', border: 'none', background: '#0070f3', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '16px', boxShadow: '0 4px 12px rgba(0,112,243,0.3)' },
-  btnLink: { background: 'none', border: 'none', color: '#64748b', cursor: 'pointer', marginTop: '10px', fontSize: '15px' }
+  fullPage: { height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', background:'#f8fafc', color:'#0070f3', fontFamily:'sans-serif' },
+  authPage: { height:'100vh', display:'flex', justifyContent:'center', alignItems:'center', background:'#0070f3' },
+  authCard: { background:'#fff', padding:'40px', borderRadius:'24px', textAlign:'center', width:'350px' },
+  logoText: { color:'#0070f3', fontSize:'32px', marginBottom:'20px' },
+  app: { minHeight:'100vh', background:'#f1f5f9', fontFamily:'sans-serif' },
+  nav: { display:'flex', justifyContent:'space-between', padding:'15px 50px', background:'#fff', borderBottom:'1px solid #e2e8f0' },
+  logoNav: { fontSize:'22px', fontWeight:'800', color:'#0070f3', cursor:'pointer' },
+  navBtn: { border:'none', background:'none', color:'#64748b', cursor:'pointer', marginLeft:'20px', fontWeight:'600' },
+  active: { border:'none', background:'none', color:'#0070f3', cursor:'pointer', marginLeft:'20px', fontWeight:'800', borderBottom:'2px solid #0070f3' },
+  btnSair: { color:'red', border:'1px solid #fee2e2', padding:'5px 15px', borderRadius:'8px', background:'#fff', cursor:'pointer', marginLeft:'20px' },
+  main: { padding:'40px 50px' },
+  toast: { position:'fixed', top:'20px', right:'20px', background:'#22c55e', color:'#fff', padding:'15px 25px', borderRadius:'12px', boxShadow:'0 10px 20px rgba(0,0,0,0.1)', zIndex:9999 },
+  home: { textAlign:'center', marginTop:'50px' },
+  title: { fontSize:'36px', color:'#1e293b' },
+  sub: { color:'#64748b', fontSize:'18px', marginBottom:'40px' },
+  homeGrid: { display:'flex', gap:'20px', justifyContent:'center' },
+  homeCard: { padding:'30px 50px', background:'#fff', borderRadius:'20px', border:'none', boxShadow:'0 4px 12px rgba(0,0,0,0.05)', cursor:'pointer', fontSize:'18px', fontWeight:'700', color:'#0070f3' },
+  kpiRow: { display:'flex', gap:'20px', marginBottom:'40px', alignItems:'center' },
+  kpi: { background:'#fff', padding:'20px', borderRadius:'20px', flex:1, boxShadow:'0 2px 10px rgba(0,0,0,0.02)' },
+  kpiGold: { background:'#fff', padding:'20px', borderRadius:'20px', flex:1, border:'2px solid #fbbf24' },
+  chart: { display:'flex', flexDirection:'column', alignItems:'center', gap:'5px' },
+  donut: { width:'80px', height:'80px', borderRadius:'50%', display:'flex', justifyContent:'center', alignItems:'center' },
+  donutIn: { width:'60px', height:'60px', background:'#f1f5f9', borderRadius:'50%', display:'flex', justifyContent:'center', alignItems:'center', fontWeight:'bold' },
+  grid: { display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px' },
+  card: { background:'#fff', padding:'20px', borderRadius:'20px', boxShadow:'0 4px 10px rgba(0,0,0,0.02)' },
+  cardGold: { background:'#fff', padding:'20px', borderRadius:'20px', border:'2px solid #fbbf24' },
+  cardHead: { display:'flex', justifyContent:'space-between', marginBottom:'15px' },
+  statusSelect: { border:'none', color:'#fff', padding:'5px 10px', borderRadius:'8px', fontSize:'10px', fontWeight:'bold', cursor:'pointer' },
+  editBtn: { background:'none', border:'none', cursor:'pointer' },
+  formBox: { maxWidth:'450px', margin:'0 auto', background:'#fff', padding:'40px', borderRadius:'24px' },
+  form: { display:'flex', flexDirection:'column', gap:'15px' },
+  input: { padding:'15px', borderRadius:'12px', border:'1px solid #e2e8f0', background:'#f8fafc' },
+  btnPrimary: { padding:'15px', borderRadius:'12px', border:'none', background:'#0070f3', color:'#fff', fontWeight:'700', cursor:'pointer' },
+  btnLink: { background:'none', border:'none', color:'#64748b', cursor:'pointer', marginTop:'10px' }
 };
 
 export default App;
