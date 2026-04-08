@@ -32,7 +32,7 @@ export default function App() {
   const [idadeLead, setIdadeLead] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // State para o Toast Minimalista
+  // Notificação Customizada (Toast)
   const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
@@ -49,9 +49,10 @@ export default function App() {
     return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
-  const showNotification = (msg) => {
+  // Função para disparar a notificação
+  const triggerToast = (msg) => {
     setToast({ show: true, message: msg });
-    setTimeout(() => setToast({ show: false, message: '' }), 3000);
+    setTimeout(() => setToast({ show: false, message: '' }), 4000);
   };
 
   const handleAuth = async (e) => {
@@ -59,9 +60,7 @@ export default function App() {
     try {
       if (isRegistering) await createUserWithEmailAndPassword(auth, email, password);
       else await signInWithEmailAndPassword(auth, email, password);
-    } catch (err) { 
-      alert("Acesso negado. Verifique os dados."); 
-    }
+    } catch (err) { alert("Acesso negado."); }
   };
 
   const handleNovoLead = async (e) => {
@@ -74,38 +73,34 @@ export default function App() {
     
     try {
       await addDoc(collection(db, "leads"), {
-        nome: nomeLead, 
-        cep: cepLead, 
-        idade: idadeLead, 
-        categoria: categoria,
-        status: "NOVO LEAD", 
-        userId: user.uid, 
-        createdAt: serverTimestamp()
+        nome: nomeLead, cep: cepLead, idade: idadeLead, categoria,
+        status: "NOVO LEAD", userId: user.uid, createdAt: serverTimestamp()
       });
 
-      showNotification("Lead cadastrado com sucesso!");
+      // Dispara o aviso ANTES de mudar a tela para garantir visibilidade
+      triggerToast("Lead cadastrado com sucesso!");
       
+      // Limpa e volta
       setNomeLead(''); setCepLead(''); setIdadeLead('');
-      setTimeout(() => setView('dashboard'), 800); 
+      setTimeout(() => setView('dashboard'), 1000); 
     } catch (err) {
-      alert("Erro ao conectar com Firebase.");
+      alert("Erro ao salvar.");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const totalLeads = leads.length;
   const highTicketLeads = leads.filter(l => l.categoria === 'HIGH TICKET').length;
-  const porcentagemHigh = totalLeads > 0 ? Math.round((highTicketLeads / totalLeads) * 100) : 0;
+  const porcentagemHigh = leads.length > 0 ? Math.round((highTicketLeads / leads.length) * 100) : 0;
 
-  if (loading) return <div style={st.fullPage}>Carregando Klinni...</div>;
+  if (loading) return <div style={st.fullPage}>KLINNI IA...</div>;
 
   return (
     <div style={st.dashboardWrapper}>
       
-      {/* TOAST MINIMALISTA GLASSMORPHISM NO CANTO SUPERIOR */}
+      {/* AVISO MINIMALISTA GLASSMORPHISM NO TOPO */}
       {toast.show && (
-        <div style={st.toastContainer}>
+        <div style={st.toastWrapper}>
           <div style={st.toastGlass}>
             <div style={st.toastCheck}>✓</div>
             <span style={st.toastText}>{toast.message}</span>
@@ -130,7 +125,7 @@ export default function App() {
       ) : (
         <>
           <nav style={st.nav}>
-            <div style={st.logoTextNav}>KLINNI <span>IA</span></div>
+            <div style={st.logoTextNav}>KLINNI <span style={{fontWeight:'300'}}>IA</span></div>
             <div style={st.navActions}>
               <button onClick={()=>setView('dashboard')} style={view==='dashboard'?st.navBtnActive:st.navBtn}>Dashboard</button>
               <button onClick={()=>setView('novoLead')} style={view==='novoLead'?st.navBtnActive:st.navBtn}>+ Novo Lead</button>
@@ -141,9 +136,9 @@ export default function App() {
           <main style={st.main}>
             {view === 'dashboard' ? (
               <>
-                <h2 style={st.mainTitle}>Resumo Salvador</h2>
+                <h2 style={st.mainTitle}>Performance Salvador</h2>
                 <div style={st.kpiRow}>
-                  <div style={st.kpiCard}><span style={st.kpiLabel}>Base</span><span style={st.kpiValue}>{totalLeads}</span></div>
+                  <div style={st.kpiCard}><span style={st.kpiLabel}>Base</span><span style={st.kpiValue}>{leads.length}</span></div>
                   <div style={st.kpiCardGold}><span style={st.kpiLabel}>High Ticket</span><span style={st.kpiValueGold}>{highTicketLeads}</span></div>
                   <div style={st.chartCard}>
                     <div style={{...st.donut, backgroundImage: `conic-gradient(#d4af37 ${porcentagemHigh}%, #eff6ff ${porcentagemHigh}%)`}}>
@@ -189,51 +184,61 @@ export default function App() {
 }
 
 const st = {
+  // Configurações Gerais
   fullPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif', background: '#f8fafc' },
-  authPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0070f3' },
-  authCard: { background: '#fff', padding: '40px', borderRadius: '25px', width: '300px', textAlign: 'center' },
-  logoText: { color: '#0070f3', fontSize: '32px', fontWeight: '800' },
-  dashboardWrapper: { minHeight: '100vh', background: '#f8fafc', fontFamily: 'sans-serif' },
-  nav: { display: 'flex', justifyContent: 'space-between', padding: '15px 50px', background: '#fff', borderBottom: '1px solid #eee' },
-  navActions: { display: 'flex', gap: '20px' },
-  navBtn: { border: 'none', background: 'none', cursor: 'pointer', color: '#666' },
-  navBtnActive: { border: 'none', background: 'none', color: '#0070f3', fontWeight: 'bold' },
-  btnSair: { color: 'red', border: 'none', background: 'none', cursor: 'pointer' },
-  main: { padding: '40px 50px' },
-  mainTitle: { fontSize: '28px', marginBottom: '25px', fontWeight: '800' },
-  kpiRow: { display: 'flex', gap: '20px', marginBottom: '30px' },
-  kpiCard: { background: '#fff', padding: '20px', borderRadius: '15px', flex: 1, border: '1px solid #eee' },
-  kpiCardGold: { background: '#fff', padding: '20px', borderRadius: '15px', flex: 1, border: '1px solid #fbbf24' },
-  kpiLabel: { display: 'block', color: '#64748b', fontSize: '12px', fontWeight: 'bold' },
-  kpiValue: { fontSize: '32px', fontWeight: '800', color: '#0070f3' },
-  kpiValueGold: { fontSize: '32px', fontWeight: '800', color: '#d4af37' },
-  chartCard: { background: '#fff', padding: '15px', borderRadius: '15px', display: 'flex', alignItems: 'center' },
-  donut: { width: '60px', height: '60px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  donutCenter: { width: '45px', height: '45px', background: '#fff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '12px', fontWeight: 'bold' },
-  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' },
-  card: { background: '#fff', padding: '20px', borderRadius: '15px', border: '1px solid #eee' },
-  cardHigh: { background: '#fff', padding: '20px', borderRadius: '15px', border: '2px solid #fbbf24' },
-  cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '10px' },
-  tag: { fontSize: '10px', fontWeight: '800', color: '#0070f3' },
-  badgeGold: { fontSize: '10px', color: '#92400e', background: '#fef3c7', padding: '4px 8px', borderRadius: '6px' },
-  badge: { fontSize: '10px', color: '#64748b', background: '#f1f5f9', padding: '4px 8px', borderRadius: '6px' },
-  leadName: { fontSize: '20px', fontWeight: '700', marginBottom: '8px' },
-  leadMeta: { display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '13px' },
-  formWrapper: { display: 'flex', justifyContent: 'center' },
-  formCard: { background: '#fff', padding: '40px', borderRadius: '25px', width: '100%', maxWidth: '400px', boxShadow: '0 4px 20px rgba(0,0,0,0.05)' },
-  form: { display: 'flex', flexDirection: 'column', gap: '15px' },
-  input: { padding: '14px', borderRadius: '10px', border: '1px solid #e2e8f0' },
-  btnPrimary: { padding: '14px', borderRadius: '10px', border: 'none', background: '#0070f3', color: '#fff', fontWeight: 'bold', cursor: 'pointer' },
-  btnLink: { background: 'none', border: 'none', color: '#999', cursor: 'pointer', marginTop: '10px' },
+  authPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0070f3', width: '100%' },
+  authCard: { background: '#fff', padding: '50px', borderRadius: '30px', width: '350px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' },
+  logoText: { color: '#0070f3', fontSize: '38px', fontWeight: '800', marginBottom: '30px' },
+  
+  dashboardWrapper: { minHeight: '100vh', background: '#f1f5f9', fontFamily: 'sans-serif' },
+  nav: { display: 'flex', justifyContent: 'space-between', padding: '20px 60px', background: '#fff', alignItems: 'center', borderBottom: '1px solid #e2e8f0' },
+  logoTextNav: { fontSize: '24px', fontWeight: '800', color: '#0070f3' },
+  navActions: { display: 'flex', gap: '30px', alignItems: 'center' },
+  navBtn: { border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: '15px', fontWeight: '500' },
+  navBtnActive: { border: 'none', background: 'none', color: '#0070f3', fontWeight: '800', fontSize: '15px', borderBottom: '2px solid #0070f3' },
+  btnSair: { color: '#ef4444', border: '1px solid #fee2e2', background: '#fff', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer' },
 
-  // TOAST GLASSMORPHISM
-  toastContainer: { position: 'fixed', top: '25px', right: '25px', zIndex: '9999' },
+  main: { padding: '50px 60px' },
+  mainTitle: { fontSize: '32px', color: '#1e293b', fontWeight: '800', marginBottom: '30px' },
+  kpiRow: { display: 'flex', gap: '25px', marginBottom: '40px' },
+  kpiCard: { background: '#fff', padding: '25px', borderRadius: '20px', flex: 1, border: '1px solid #e2e8f0' },
+  kpiCardGold: { background: '#fff', padding: '25px', borderRadius: '20px', flex: 1, border: '2px solid #fbbf24' },
+  kpiLabel: { color: '#64748b', fontSize: '14px', fontWeight: '600' },
+  kpiValue: { fontSize: '40px', fontWeight: '800', color: '#0070f3', display: 'block' },
+  kpiValueGold: { fontSize: '40px', fontWeight: '800', color: '#d4af37', display: 'block' },
+  chartCard: { background: '#fff', padding: '20px', borderRadius: '20px', display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0' },
+  donut: { width: '80px', height: '80px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' },
+  donutCenter: { width: '55px', height: '55px', background: '#fff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '800', color: '#1e293b' },
+
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' },
+  card: { background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0' },
+  cardHigh: { background: '#fff', padding: '25px', borderRadius: '20px', border: '2px solid #fbbf24', boxShadow: '0 10px 20px rgba(212,175,55,0.05)' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '15px' },
+  tag: { fontSize: '10px', fontWeight: '800', color: '#0070f3', background: '#eff6ff', padding: '4px 10px', borderRadius: '6px' },
+  badgeGold: { fontSize: '11px', color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px', fontWeight: '700' },
+  badge: { fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px' },
+  leadName: { fontSize: '22px', color: '#1e293b', fontWeight: '700', marginBottom: '10px' },
+  leadMeta: { display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '14px' },
+
+  formWrapper: { display: 'flex', justifyContent: 'center' },
+  formCard: { background: '#fff', padding: '50px', borderRadius: '30px', width: '450px', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' },
+  form: { display: 'flex', flexDirection: 'column', gap: '20px' },
+  input: { padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px' },
+  btnPrimary: { padding: '16px', borderRadius: '12px', border: 'none', background: '#0070f3', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '16px' },
+  btnLink: { background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginTop: '10px' },
+
+  // TOAST REVISADO (GLASSMORPHISM)
+  toastWrapper: { position: 'fixed', top: '30px', right: '30px', zIndex: 9999 },
   toastGlass: {
-    display: 'flex', alignItems: 'center', gap: '12px', padding: '12px 20px',
-    background: 'rgba(255, 255, 255, 0.8)', backdropFilter: 'blur(10px)',
-    borderRadius: '16px', border: '1px solid rgba(255,255,255,0.4)',
-    boxShadow: '0 10px 30px rgba(0,0,0,0.08)'
+    display: 'flex', alignItems: 'center', gap: '15px', padding: '15px 25px',
+    background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(12px)',
+    borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.5)',
+    boxShadow: '0 15px 35px rgba(0,0,0,0.1)', animation: 'fadeIn 0.5s ease'
   },
-  toastCheck: { width: '22px', height: '22px', background: '#10b981', color: '#fff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontSize: '12px', fontWeight: 'bold' },
-  toastText: { color: '#1e293b', fontWeight: '600', fontSize: '14px' }
+  toastCheck: { 
+    width: '28px', height: '28px', background: '#10b981', color: '#fff', 
+    borderRadius: '50%', display: 'flex', justifyContent: 'center', 
+    alignItems: 'center', fontSize: '14px', fontWeight: 'bold' 
+  },
+  toastText: { color: '#1e293b', fontWeight: '700', fontSize: '15px' }
 };
