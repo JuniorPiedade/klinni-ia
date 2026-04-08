@@ -1,54 +1,81 @@
-# Importação de bibliotecas necessárias
-import pandas as pd
-import numpy as np
+import React, { useState, useEffect } from 'react';
 
-def processar_dados_revisados(dataframe):
-    """
-    Função consolidada para limpeza, transformação e 
-    aplicação dos novos ajustes de lógica.
-    """
-    
-    # 1. Limpeza Inicial
-    # Removendo duplicatas e tratando valores nulos nos campos críticos
-    df = dataframe.drop_duplicates().copy()
-    df['data'] = pd.to_datetime(df['data'])
-    
-    # 2. Aplicação dos Novos Ajustes
-    # Inserindo a lógica de cálculo de margem e faixas de prioridade
-    # conforme solicitado na última interação.
-    
-    # Exemplo de ajuste de cálculo:
-    df['valor_ajustado'] = df['valor_original'] * 1.05  # Ajuste de 5% fixo
-    
-    # 3. Lógica de Classificação (Novo Ajuste)
-    # Definindo categorias com base nos novos limites
-    condicoes = [
-        (df['valor_ajustado'] >= 1000),
-        (df['valor_ajustado'] < 1000) & (df['valor_ajustado'] >= 500),
-        (df['valor_ajustado'] < 500)
-    ]
-    escolhas = ['Premium', 'Standard', 'Econômico']
-    df['categoria_prioridade'] = np.select(condicoes, escolhas, default='N/A')
+/**
+ * App.js - Versão Completa e Revisada
+ * Inclui: Gerenciamento de estado, cálculos de ajuste e renderização de tabela.
+ */
+function App() {
+  // --- Estados da Aplicação ---
+  const [dados, setDados] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [erro, setErro] = useState(null);
 
-    # 4. Refinamento de Saída
-    # Ordenação e seleção de colunas relevantes para o relatório final
-    df_final = df.sort_values(by=['data', 'valor_ajustado'], ascending=[True, False])
-    
-    return df_final
+  // --- Lógica de Processamento (Ajustes Solicitados) ---
+  const processarNovosAjustes = (listaOriginal) => {
+    return listaOriginal.map(item => {
+      // Aplicando ajuste de 5% e definindo categorias
+      const valorAjustado = item.valor_original * 1.05;
+      let categoria = 'Econômico';
 
-# --- Bloco de Execução ---
-if __name__ == "__main__":
-    # Criando um dataset de exemplo para teste imediato
-    dados_teste = {
-        'data': ['2023-10-01', '2023-10-01', '2023-10-02'],
-        'valor_original': [1200, 450, 800],
-        'id_transacao': [101, 102, 103]
-    }
-    
-    df_input = pd.DataFrame(dados_teste)
-    
-    # Executando o processamento
-    resultado = processar_dados_revisados(df_input)
-    
-    print("### Resultado do Processamento ###")
-    print(resultado)
+      if (valorAjustado >= 1000) {
+        categoria = 'Premium';
+      } else if (valorAjustado >= 500) {
+        categoria = 'Standard';
+      }
+
+      return {
+        ...item,
+        valor_ajustado: valorAjustado,
+        categoria_prioridade: categoria
+      };
+    });
+  };
+
+  // --- Carregamento de Dados ---
+  useEffect(() => {
+    const carregarDados = async () => {
+      try {
+        setLoading(true);
+        
+        // Simulação de dados (Substitua pela sua chamada de API se necessário)
+        const mockData = [
+          { id: 101, data: '2023-10-01', valor_original: 1200 },
+          { id: 102, data: '2023-10-01', valor_original: 450 },
+          { id: 103, data: '2023-10-02', valor_original: 800 }
+        ];
+
+        // Aplica a lógica de revisão nos dados carregados
+        const dadosTratados = processarNovosAjustes(mockData);
+        
+        setDados(dadosTratados);
+      } catch (err) {
+        setErro("Erro ao processar o arquivo. Verifique os dados de entrada.");
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    carregarDados();
+  }, []);
+
+  // --- Renderização de Interface ---
+  if (loading) {
+    return (
+      <div style={{ padding: '20px', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        <h2>Carregando código revisado...</h2>
+      </div>
+    );
+  }
+
+  if (erro) {
+    return (
+      <div style={{ padding: '20px', color: 'red', textAlign: 'center', fontFamily: 'sans-serif' }}>
+        <h2>⚠️ Erro</h2>
+        <p>{erro}</p>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ padding
