@@ -1,151 +1,219 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
+import { 
+  getAuth, 
+  createUserWithEmailAndPassword, 
+  signInWithEmailAndPassword, 
+  onAuthStateChanged, 
+  signOut 
+} from "firebase/auth";
+import { 
+  getFirestore, 
+  collection, 
+  addDoc, 
+  query, 
+  where, 
+  onSnapshot,
+  orderBy 
+} from "firebase/firestore";
 
-// CONFIGURAÇÃO REAL DO KLINNI IA
+// --- CONFIGURAÇÃO DO FIREBASE (DADOS DO SEU PROJETO) ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBQRYB3vMi4QG___Pe9xQeNVpTJGS2hyD4",
+  apiKey: "AIzaSyBQRYB3vMi4QG34Pe9xQeNVpTJGS2hyD4", 
   authDomain: "klinni-ia.firebaseapp.com",
   projectId: "klinni-ia",
   storageBucket: "klinni-ia.firebasestorage.app",
   messagingSenderId: "761229946691",
-  appId: "1:761229946691:web:d538bb4f7ab6cc97be09f6",
-  measurementId: "G-HKGF1J1GWP"
+  appId: "1:761229946691:web:feeceb3caed42445be09f6",
+  measurementId: "G-D22KSD4C7C"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// --- COMPONENTE PRINCIPAL ---
 function App() {
   const [user, setUser] = useState(null);
-  const [view, setView] = useState('login'); 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [view, setView] = useState('login'); // login, registro, dashboard, novoLead
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Estados para o formulário de NOVO LEAD
+  // Form de novo lead
   const [nomeLead, setNomeLead] = useState('');
-  const [telLead, setTelLead] = useState('');
   const [cepLead, setCepLead] = useState('');
-  const [servicoLead, setServicoLead] = useState('');
+  const [idadeLead, setIdadeLead] = useState('');
 
-  // Monitor de Autenticação
+  // Monitorar Autenticação
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
-      if (currentUser) {
-        setView('dashboard');
-      } else {
-        setView('login');
-      }
       setLoading(false);
+      if (currentUser) setView('dashboard');
     });
     return () => unsubscribe();
   }, []);
 
-  // Carregar Leads em Tempo Real
+  // Monitorar Leads do Banco de Dados
   useEffect(() => {
     if (user) {
-      const q = query(collection(db, "leads"), orderBy("createdAt", "desc"));
-      const unsubLeads = onSnapshot(q, (snapshot) => {
-        const list = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        setLeads(list);
+      const q = query(
+        collection(db, "leads"), 
+        where("userId", "==", user.uid),
+        orderBy("createdAt", "desc")
+      );
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        const dados = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        setLeads(dados);
       });
-      return () => unsubLeads();
+      return () => unsubscribe();
     }
   }, [user]);
 
-  const handleAuth = async (type) => {
+  // Lógica de Autenticação
+  const handleAuth = async (e) => {
+    e.preventDefault();
     try {
-      if (type === 'register') {
+      if (view === 'registro') {
         await createUserWithEmailAndPassword(auth, email, password);
       } else {
         await signInWithEmailAndPassword(auth, email, password);
       }
-    } catch (err) {
-      alert("Erro: " + err.message);
+    } catch (error) {
+      alert("Erro na autenticação: " + error.message);
     }
   };
 
-  const cadastrarLead = async (e) => {
+  // Lógica de Cadastro de Lead com "Inteligência Klinni"
+  const handleNovoLead = async (e) => {
     e.preventDefault();
-    try {
-      // Lógica de classificação automática por CEP (Regiões Nobres de Salvador)
-      const bairrosNobres = ['40140', '41810', '41830', '40150', '41940']; 
-      const prefixoCep = cepLead.substring(0, 5);
-      const categoria = bairrosNobres.includes(prefixoCep) ? 'HIGH TICKET' : 'TICKET MÉDIO';
+    
+    // Lógica High Ticket (Bairros Nobres de Salvador)
+    const bairrosNobres = ['40140', '41940', '40080']; // Graça, Rio Vermelho, Vitória
+    const prefixoCEP = cepLead.substring(0, 5);
+    
+    let categoria = "Ticket Médio";
+    if (bairrosNobres.includes(prefixoCEP) && parseInt(idadeLead) >= 20) {
+      categoria = "HIGH TICKET";
+    }
 
+    try {
       await addDoc(collection(db, "leads"), {
         nome: nomeLead,
-        telefone: telLead,
         cep: cepLead,
-        servico: servicoLead,
+        idade: idadeLead,
         categoria: categoria,
-        createdAt: serverTimestamp()
+        status: "NOVO LEAD",
+        userId: user.uid,
+        createdAt: new Date()
       });
-
-      alert("Lead cadastrado com sucesso!");
-      setNomeLead(''); setTelLead(''); setCepLead(''); setServicoLead('');
       setView('dashboard');
-    } catch (err) {
-      alert("Erro ao salvar lead: " + err.message);
+      setNomeLead(''); setCepLead(''); setIdadeLead('');
+    } catch (error) {
+      alert("Erro ao salvar lead: " + error.message);
     }
   };
 
-  if (loading) return <div className="h-screen flex items-center justify-center bg-ice-gray font-inter">Carregando Sistema...</div>;
+  if (loading) return <div style={styles.container}>Carregando Klinni IA...</div>;
 
+  // --- TELA DE LOGIN / REGISTRO ---
+  if (!user) {
+    return (
+      <div style={styles.container}>
+        <div style={styles.card}>
+          <h1 style={styles.logo}>KLINNI IA</h1>
+          <p style={styles.subtitle}>{view === 'login' ? 'Entre no seu CRM' : 'Crie sua conta profissional'}</p>
+          <form onSubmit={handleAuth} style={styles.form}>
+            <input 
+              type="email" placeholder="Seu e-mail" style={styles.input}
+              value={email} onChange={(e) => setEmail(e.target.value)} required 
+            />
+            <input 
+              type="password" placeholder="Sua senha" style={styles.input}
+              value={password} onChange={(e) => setPassword(e.target.value)} required 
+            />
+            <button type="submit" style={styles.btnPrimary}>
+              {view === 'login' ? 'Acessar Sistema' : 'Finalizar Cadastro'}
+            </button>
+          </form>
+          <button onClick={() => setView(view === 'login' ? 'registro' : 'login')} style={styles.btnLink}>
+            {view === 'login' ? 'Não tem conta? Cadastre-se' : 'Já tenho conta. Voltar ao login'}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // --- DASHBOARD PRINCIPAL ---
   return (
-    <div className="min-h-screen bg-ice-gray font-inter text-slate-800">
-      {/* NAVBAR: Só mostra opções se logado */}
-      <nav className="bg-white shadow-sm p-4 flex justify-between items-center border-b border-blue-100">
-        <h1 className="text-xl font-bold tracking-tighter text-soft-blue">KLINNI IA</h1>
-        {user && (
-          <div className="flex gap-6 items-center">
-            <button onClick={() => setView('dashboard')} className={`text-sm font-medium ${view === 'dashboard' ? 'text-soft-blue' : 'text-slate-400'}`}>📋 GESTÃO</button>
-            <button onClick={() => setView('novo')} className={`text-sm font-medium ${view === 'novo' ? 'text-soft-blue' : 'text-slate-400'}`}>➕ NOVO LEAD</button>
-            <button onClick={() => signOut(auth)} className="bg-red-50 text-red-500 px-3 py-1 rounded-full text-xs font-bold hover:bg-red-100 transition">SAIR</button>
-          </div>
-        )}
+    <div style={styles.dashboardContainer}>
+      <nav style={styles.nav}>
+        <span style={styles.navLogo}>KLINNI IA</span>
+        <div>
+          <button onClick={() => setView('dashboard')} style={styles.navBtn}>LEADS</button>
+          <button onClick={() => setView('novoLead')} style={styles.navBtn}>+ NOVO</button>
+          <button onClick={() => signOut(auth)} style={styles.btnSair}>Sair</button>
+        </div>
       </nav>
 
-      <main className="max-w-4xl mx-auto p-6">
-        {/* VIEW: LOGIN / REGISTER */}
-        {!user && (
-          <div className="mt-20 max-w-md mx-auto bg-white p-8 rounded-clinic shadow-xl border border-blue-50">
-            <h2 className="text-2xl font-bold text-center mb-2">{view === 'login' ? 'Acessar Conta' : 'Criar Conta'}</h2>
-            <p className="text-center text-slate-400 text-sm mb-8 italic">Gestão de Leads de Alto Padrão</p>
-            
-            <input type="email" placeholder="E-mail" className="w-full p-4 mb-4 bg-ice-gray rounded-xl outline-none focus:ring-2 focus:ring-soft-blue" onChange={(e) => setEmail(e.target.value)} />
-            <input type="password" placeholder="Senha" className="w-full p-4 mb-6 bg-ice-gray rounded-xl outline-none focus:ring-2 focus:ring-soft-blue" onChange={(e) => setPassword(e.target.value)} />
-            
-            <button onClick={() => handleAuth(view)} className="w-full py-4 bg-gradient-to-r from-soft-blue to-deep-blue text-white rounded-xl font-bold shadow-lg transform active:scale-95 transition">
-              {view === 'login' ? 'ENTRAR' : 'CRIAR MINHA CONTA'}
-            </button>
-
-            <button onClick={() => setView(view === 'login' ? 'register' : 'login')} className="w-full mt-6 text-sm text-soft-blue font-medium underline">
-              {view === 'login' ? 'Não tem conta? Cadastre-se' : 'Já sou cadastrado. Entrar'}
-            </button>
+      <div style={styles.content}>
+        {view === 'dashboard' ? (
+          <>
+            <h2>Gestão de Oportunidades</h2>
+            <div style={styles.grid}>
+              {leads.length === 0 ? <p>Nenhum lead cadastrado ainda.</p> : leads.map(lead => (
+                <div key={lead.id} style={lead.categoria === 'HIGH TICKET' ? styles.cardHigh : styles.cardLead}>
+                  <div style={styles.cardHeader}>
+                    <strong>{lead.nome}</strong>
+                    <span style={styles.badge}>{lead.categoria}</span>
+                  </div>
+                  <p>Status: {lead.status}</p>
+                  <p>Localidade (CEP): {lead.cep}</p>
+                </div>
+              ))}
+            </div>
+          </>
+        ) : (
+          <div style={styles.cardForm}>
+            <h2>Cadastrar Novo Lead</h2>
+            <form onSubmit={handleNovoLead} style={styles.form}>
+              <input placeholder="Nome do Paciente/Cliente" style={styles.input} value={nomeLead} onChange={e => setNomeLead(e.target.value)} required />
+              <input placeholder="CEP (Apenas números)" style={styles.input} value={cepLead} onChange={e => setCepLead(e.target.value)} required />
+              <input placeholder="Idade" type="number" style={styles.input} value={idadeLead} onChange={e => setIdadeLead(e.target.value)} required />
+              <button type="submit" style={styles.btnPrimary}>Salvar e Classificar</button>
+              <button type="button" onClick={() => setView('dashboard')} style={styles.btnLink}>Cancelar</button>
+            </form>
           </div>
         )}
+      </div>
+    </div>
+  );
+}
 
-        {/* VIEW: GESTÃO (DASHBOARD) */}
-        {user && view === 'dashboard' && (
-          <div>
-            <div className="flex justify-between items-end mb-8">
-              <div>
-                <h2 className="text-3xl font-bold text-slate-800">Gestão de Oportunidades</h2>
-                <p className="text-slate-500">Seus potenciais clientes em tempo real.</p>
-              </div>
-              <div className="bg-white px-4 py-2 rounded-lg shadow-sm border border-blue-50 text-sm font-bold text-soft-blue">
-                {leads.length} Leads
-              </div>
-            </div>
+// --- ESTILOS (AESTHETIC CLEAN & FUTURISTIC) ---
+const styles = {
+  container: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#f0f2f5', fontFamily: 'sans-serif' },
+  dashboardContainer: { minHeight: '100vh', backgroundColor: '#f8f9fa', fontFamily: 'sans-serif' },
+  card: { padding: '40px', backgroundColor: '#fff', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)', textAlign: 'center', width: '350px' },
+  logo: { color: '#0070f3', fontSize: '28px', marginBottom: '10px', letterSpacing: '2px' },
+  subtitle: { color: '#666', marginBottom: '20px' },
+  form: { display: 'flex', flexDirection: 'column', gap: '15px' },
+  input: { padding: '12px', borderRadius: '8px', border: '1px solid #ddd', fontSize: '16px' },
+  btnPrimary: { padding: '12px', backgroundColor: '#0070f3', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontSize: '16px', fontWeight: 'bold' },
+  btnLink: { marginTop: '15px', backgroundColor: 'transparent', border: 'none', color: '#0070f3', cursor: 'pointer' },
+  nav: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 30px', backgroundColor: '#fff', borderBottom: '1px solid #eee' },
+  navLogo: { fontWeight: 'bold', color: '#0070f3', fontSize: '20px' },
+  navBtn: { marginLeft: '15px', border: 'none', backgroundColor: 'transparent', color: '#333', fontWeight: 'bold', cursor: 'pointer' },
+  btnSair: { marginLeft: '15px', padding: '5px 12px', borderRadius: '6px', border: '1px solid #ff4d4f', color: '#ff4d4f', backgroundColor: 'transparent', cursor: 'pointer' },
+  content: { padding: '30px' },
+  grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' },
+  cardLead: { padding: '20px', backgroundColor: '#fff', borderRadius: '10px', borderLeft: '5px solid #ccc', boxShadow: '0 2px 5px rgba(0,0,0,0.05)' },
+  cardHigh: { padding: '20px', backgroundColor: '#fff', borderRadius: '10px', borderLeft: '5px solid #ffcc00', boxShadow: '0 4px 10px rgba(255, 204, 0, 0.2)', backgroundImage: 'linear-gradient(to right, #fffcf0, #fff)' },
+  cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '10px' },
+  badge: { fontSize: '10px', backgroundColor: '#eee', padding: '2px 8px', borderRadius: '10px', fontWeight: 'bold' },
+  cardForm: { maxWidth: '500px', margin: '0 auto', backgroundColor: '#fff', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }
+};
 
-            <div className="grid gap-4">
-              {leads.length === 0 ? (
-                <div className="text-center py-20 bg-white rounded-clinic border-2 border-dashed border-blue-100 text-slate-400">
-                  Nenhum lead encontrado.
-                </div>
+export default App;
