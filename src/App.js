@@ -32,14 +32,11 @@ export default function App() {
   const [idadeLead, setIdadeLead] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // Notificação Customizada (Toast)
+  // State da Notificação (Toast)
   const [toast, setToast] = useState({ show: false, message: '' });
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (u) => { 
-      setUser(u); 
-      setLoading(false); 
-    });
+    const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
     return () => unsubscribe();
   }, []);
 
@@ -48,12 +45,6 @@ export default function App() {
     const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
     return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
-
-  // Função para disparar a notificação
-  const triggerToast = (msg) => {
-    setToast({ show: true, message: msg });
-    setTimeout(() => setToast({ show: false, message: '' }), 4000);
-  };
 
   const handleAuth = async (e) => {
     e.preventDefault();
@@ -77,12 +68,18 @@ export default function App() {
         status: "NOVO LEAD", userId: user.uid, createdAt: serverTimestamp()
       });
 
-      // Dispara o aviso ANTES de mudar a tela para garantir visibilidade
-      triggerToast("Lead cadastrado com sucesso!");
+      // 1. DISPARA O TOAST PRIMEIRO
+      setToast({ show: true, message: `Lead ${nomeLead} triado com sucesso!` });
       
-      // Limpa e volta
+      // 2. LIMPA OS CAMPOS
       setNomeLead(''); setCepLead(''); setIdadeLead('');
-      setTimeout(() => setView('dashboard'), 1000); 
+      
+      // 3. AGUARDA 3 SEGUNDOS PARA O USUÁRIO VER E ENTÃO FECHA E MUDA DE TELA
+      setTimeout(() => {
+        setToast({ show: false, message: '' });
+        setView('dashboard');
+      }, 3000);
+
     } catch (err) {
       alert("Erro ao salvar.");
     } finally {
@@ -98,7 +95,7 @@ export default function App() {
   return (
     <div style={st.dashboardWrapper}>
       
-      {/* AVISO MINIMALISTA GLASSMORPHISM NO TOPO */}
+      {/* TOAST GLASSMORPHISM - POSIÇÃO ABSOLUTA NO TOPO DO APP */}
       {toast.show && (
         <div style={st.toastWrapper}>
           <div style={st.toastGlass}>
@@ -184,61 +181,76 @@ export default function App() {
 }
 
 const st = {
-  // Configurações Gerais
+  // CONFIGURAÇÃO DE UI MANTIDA
   fullPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', fontFamily: 'sans-serif', background: '#f8fafc' },
   authPage: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', background: '#0070f3', width: '100%' },
-  authCard: { background: '#fff', padding: '50px', borderRadius: '30px', width: '350px', textAlign: 'center', boxShadow: '0 20px 40px rgba(0,0,0,0.1)' },
-  logoText: { color: '#0070f3', fontSize: '38px', fontWeight: '800', marginBottom: '30px' },
-  
-  dashboardWrapper: { minHeight: '100vh', background: '#f1f5f9', fontFamily: 'sans-serif' },
+  authCard: { background: '#fff', padding: '50px', borderRadius: '30px', width: '350px', textAlign: 'center' },
+  logoText: { color: '#0070f3', fontSize: '38px', fontWeight: '800' },
+  dashboardWrapper: { minHeight: '100vh', background: '#f1f5f9', fontFamily: 'sans-serif', position: 'relative' },
   nav: { display: 'flex', justifyContent: 'space-between', padding: '20px 60px', background: '#fff', alignItems: 'center', borderBottom: '1px solid #e2e8f0' },
   logoTextNav: { fontSize: '24px', fontWeight: '800', color: '#0070f3' },
   navActions: { display: 'flex', gap: '30px', alignItems: 'center' },
-  navBtn: { border: 'none', background: 'none', cursor: 'pointer', color: '#64748b', fontSize: '15px', fontWeight: '500' },
-  navBtnActive: { border: 'none', background: 'none', color: '#0070f3', fontWeight: '800', fontSize: '15px', borderBottom: '2px solid #0070f3' },
+  navBtn: { border: 'none', background: 'none', cursor: 'pointer', color: '#64748b' },
+  navBtnActive: { border: 'none', background: 'none', color: '#0070f3', fontWeight: '800', borderBottom: '2px solid #0070f3' },
   btnSair: { color: '#ef4444', border: '1px solid #fee2e2', background: '#fff', padding: '8px 15px', borderRadius: '8px', cursor: 'pointer' },
-
   main: { padding: '50px 60px' },
   mainTitle: { fontSize: '32px', color: '#1e293b', fontWeight: '800', marginBottom: '30px' },
   kpiRow: { display: 'flex', gap: '25px', marginBottom: '40px' },
   kpiCard: { background: '#fff', padding: '25px', borderRadius: '20px', flex: 1, border: '1px solid #e2e8f0' },
   kpiCardGold: { background: '#fff', padding: '25px', borderRadius: '20px', flex: 1, border: '2px solid #fbbf24' },
-  kpiLabel: { color: '#64748b', fontSize: '14px', fontWeight: '600' },
+  kpiLabel: { color: '#64748b', fontSize: '14px' },
   kpiValue: { fontSize: '40px', fontWeight: '800', color: '#0070f3', display: 'block' },
   kpiValueGold: { fontSize: '40px', fontWeight: '800', color: '#d4af37', display: 'block' },
   chartCard: { background: '#fff', padding: '20px', borderRadius: '20px', display: 'flex', alignItems: 'center', border: '1px solid #e2e8f0' },
   donut: { width: '80px', height: '80px', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center' },
-  donutCenter: { width: '55px', height: '55px', background: '#fff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '800', color: '#1e293b' },
-
+  donutCenter: { width: '55px', height: '55px', background: '#fff', borderRadius: '50%', display: 'flex', justifyContent: 'center', alignItems: 'center', fontWeight: '800' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '25px' },
   card: { background: '#fff', padding: '25px', borderRadius: '20px', border: '1px solid #e2e8f0' },
-  cardHigh: { background: '#fff', padding: '25px', borderRadius: '20px', border: '2px solid #fbbf24', boxShadow: '0 10px 20px rgba(212,175,55,0.05)' },
+  cardHigh: { background: '#fff', padding: '25px', borderRadius: '20px', border: '2px solid #fbbf24' },
   cardHeader: { display: 'flex', justifyContent: 'space-between', marginBottom: '15px' },
-  tag: { fontSize: '10px', fontWeight: '800', color: '#0070f3', background: '#eff6ff', padding: '4px 10px', borderRadius: '6px' },
+  tag: { fontSize: '10px', fontWeight: '800', color: '#0070f3' },
   badgeGold: { fontSize: '11px', color: '#92400e', background: '#fef3c7', padding: '4px 10px', borderRadius: '6px', fontWeight: '700' },
   badge: { fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '4px 10px', borderRadius: '6px' },
-  leadName: { fontSize: '22px', color: '#1e293b', fontWeight: '700', marginBottom: '10px' },
+  leadName: { fontSize: '22px', color: '#1e293b', fontWeight: '700' },
   leadMeta: { display: 'flex', gap: '15px', color: '#94a3b8', fontSize: '14px' },
-
   formWrapper: { display: 'flex', justifyContent: 'center' },
   formCard: { background: '#fff', padding: '50px', borderRadius: '30px', width: '450px', boxShadow: '0 10px 30px rgba(0,0,0,0.04)' },
   form: { display: 'flex', flexDirection: 'column', gap: '20px' },
-  input: { padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0', fontSize: '16px' },
-  btnPrimary: { padding: '16px', borderRadius: '12px', border: 'none', background: '#0070f3', color: '#fff', fontWeight: '700', cursor: 'pointer', fontSize: '16px' },
-  btnLink: { background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer', marginTop: '10px' },
+  input: { padding: '16px', borderRadius: '12px', border: '1px solid #e2e8f0' },
+  btnPrimary: { padding: '16px', borderRadius: '12px', border: 'none', background: '#0070f3', color: '#fff', fontWeight: '700', cursor: 'pointer' },
+  btnLink: { background: 'none', border: 'none', color: '#94a3b8', cursor: 'pointer' },
 
-  // TOAST REVISADO (GLASSMORPHISM)
-  toastWrapper: { position: 'fixed', top: '30px', right: '30px', zIndex: 9999 },
+  // TOAST FIXADO NO TOPO (Z-INDEX MÁXIMO)
+  toastWrapper: { 
+    position: 'fixed', 
+    top: '40px', 
+    right: '40px', 
+    zIndex: 99999, // Força estar acima de tudo
+    pointerEvents: 'none' 
+  },
   toastGlass: {
-    display: 'flex', alignItems: 'center', gap: '15px', padding: '15px 25px',
-    background: 'rgba(255, 255, 255, 0.75)', backdropFilter: 'blur(12px)',
-    borderRadius: '20px', border: '1px solid rgba(255, 255, 255, 0.5)',
-    boxShadow: '0 15px 35px rgba(0,0,0,0.1)', animation: 'fadeIn 0.5s ease'
+    display: 'flex', 
+    alignItems: 'center', 
+    gap: '15px', 
+    padding: '16px 28px',
+    background: 'rgba(255, 255, 255, 0.85)', 
+    backdropFilter: 'blur(15px)',
+    borderRadius: '24px', 
+    border: '1px solid rgba(255, 255, 255, 0.6)',
+    boxShadow: '0 20px 40px rgba(0,0,0,0.12)',
+    pointerEvents: 'auto'
   },
   toastCheck: { 
-    width: '28px', height: '28px', background: '#10b981', color: '#fff', 
-    borderRadius: '50%', display: 'flex', justifyContent: 'center', 
-    alignItems: 'center', fontSize: '14px', fontWeight: 'bold' 
+    width: '30px', 
+    height: '30px', 
+    background: '#10b981', 
+    color: '#fff', 
+    borderRadius: '50%', 
+    display: 'flex', 
+    justifyContent: 'center', 
+    alignItems: 'center', 
+    fontSize: '16px', 
+    fontWeight: 'bold' 
   },
-  toastText: { color: '#1e293b', fontWeight: '700', fontSize: '15px' }
+  toastText: { color: '#1e293b', fontWeight: '700', fontSize: '16px' }
 };
