@@ -21,8 +21,24 @@ const theme = {
   card: "#ffffff",
   text: "#0f172a",
   gray: "#64748b",
+  lightGray: "#e2e8f0",
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
+
+// ÍCONES SVG MINIMALISTAS
+const IconEdit = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+  </svg>
+);
+
+const IconTrash = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+  </svg>
+);
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -87,12 +103,10 @@ export default function App() {
 
     try {
       if (idEditando) {
-        // MODO EDIÇÃO
         await updateDoc(doc(db, "leads", idEditando), {
           nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria
         });
       } else {
-        // MODO CRIAÇÃO
         await addDoc(collection(db, "leads"), {
           nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp()
         });
@@ -130,8 +144,10 @@ export default function App() {
         button { transition: all 0.2s ease; }
         button:hover { transform: translateY(-1px); filter: brightness(1.1); }
         input { box-sizing: border-box; width: 100%; }
-        .btn-icon { background: none; border: none; cursor: pointer; padding: 5px; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
-        .btn-icon:hover { background: #f1f5f9; }
+        /* Estilo para os botões de ação minimalistas */
+        .btn-action { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: ${theme.gray}; transition: all 0.2s ease; }
+        .btn-action:hover { background: ${theme.lightGray}; color: ${theme.text}; }
+        .btn-action-danger:hover { background: #fee2e2; color: ${theme.danger}; }
       `}</style>
 
       {!user ? (
@@ -181,9 +197,15 @@ export default function App() {
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <span style={{ fontSize: 10, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '5px 12px', borderRadius: 8, textTransform: 'uppercase', border: '1px solid rgba(0,0,0,0.03)' }}>{l.categoria}</span>
-                          <div style={{ display: 'flex', gap: 5 }}>
-                            <button title="Editar" onClick={() => prepararEdicao(l)} className="btn-icon" style={{ color: theme.gray }}>✏️</button>
-                            <button title="Excluir" onClick={() => removerLead(l.id)} className="btn-icon" style={{ color: theme.danger }}>🗑️</button>
+                          
+                          {/* BOTÕES DE AÇÃO ATUALIZADOS */}
+                          <div style={{ display: 'flex', gap: 4 }}>
+                            <button title="Editar" onClick={() => prepararEdicao(l)} className="btn-action">
+                              <IconEdit />
+                            </button>
+                            <button title="Excluir" onClick={() => removerLead(l.id)} className="btn-action btn-action-danger">
+                              <IconTrash />
+                            </button>
                           </div>
                         </div>
 
