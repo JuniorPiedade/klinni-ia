@@ -20,7 +20,6 @@ const theme = {
   card: "#ffffff",
   text: "#0f172a",
   gray: "#64748b",
-  // Nova sombra suave e moderna
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
 
@@ -55,7 +54,6 @@ export default function App() {
     });
   }, [user]);
 
-  // Função para mudar de aba com animação
   const navigateTo = (newView) => {
     setAnimate(false);
     setTimeout(() => {
@@ -100,6 +98,8 @@ export default function App() {
         button { transition: all 0.2s ease; }
         button:hover { transform: translateY(-1px); filter: brightness(1.1); }
         button:active { transform: translateY(0px); }
+        /* Estilo para inputs ficarem enquadrados */
+        input { box-sizing: border-box; width: 100%; }
       `}</style>
 
       {!user ? (
@@ -165,12 +165,13 @@ export default function App() {
                       <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                     </div>
                     
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                    {/* CONTAINER AJUSTADO E ENQUADRADO */}
+                    <div style={{ display: 'flex', gap: 16, width: '100%' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '70%' }}>
                         <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>CEP</label>
                         <input required value={cepLead} onChange={e=>setCepLead(e.target.value)} placeholder="40000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '30%' }}>
                         <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>Idade</label>
                         <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} placeholder="Ex: 30" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
