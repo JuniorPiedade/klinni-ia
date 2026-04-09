@@ -154,7 +154,11 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: theme.bg, fontFamily: '"Inter", sans-serif' }}>
-      <style>{`.fade-in { opacity: 0; transform: translateY(8px); transition: all 0.3s ease; } .fade-in.active { opacity: 1; transform: translateY(0); }`}</style>
+      <style>{`
+        .fade-in { opacity: 0; transform: translateY(8px); transition: all 0.3s ease; } 
+        .fade-in.active { opacity: 1; transform: translateY(0); }
+        input, select, textarea { box-sizing: border-box; }
+      `}</style>
       
       {/* SIDEBAR */}
       <aside style={{ width: 260, background: '#fff', borderRight: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', position: 'fixed', height: '100vh', zIndex: 100 }}>
@@ -204,7 +208,7 @@ export default function App() {
                 </button>
               ))}
             </div>
-            <input type="text" placeholder="Buscar lead por nome..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: 15, border: '1px solid #e2e8f0', marginBottom: 25, boxSizing: 'border-box' }} />
+            <input type="text" placeholder="Buscar lead por nome..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: 15, border: '1px solid #e2e8f0', marginBottom: 25 }} />
 
             {/* GRID DE LEADS */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
@@ -232,11 +236,11 @@ export default function App() {
             <div style={{ background: '#fff', borderRadius: 20, boxShadow: theme.shadow, overflow: 'hidden' }}>
               {logs.map((log, i) => (
                 <div key={log.id} style={{ padding: '20px 25px', borderBottom: i === logs.length - 1 ? 'none' : '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between' }}>
-                  <div>
-                    <strong style={{ fontSize: 15 }}>{log.leadNome}</strong>
+                  <div style={{ flex: 1, paddingRight: 20 }}>
+                    <strong style={{ fontSize: 15, display: 'block' }}>{log.leadNome}</strong>
                     <p style={{ margin: '3px 0 0 0', fontSize: 12, color: theme.gray }}>Mudou para <span style={{ color: getStatusColor(log.statusNovo), fontWeight: 700 }}>{log.statusNovo}</span></p>
                   </div>
-                  <div style={{ textAlign: 'right', fontSize: 11, color: theme.gray }}>{log.timestamp?.toDate().toLocaleDateString('pt-BR')}<br/>{log.timestamp?.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
+                  <div style={{ textAlign: 'right', fontSize: 11, color: theme.gray, minWidth: 80 }}>{log.timestamp?.toDate().toLocaleDateString('pt-BR')}<br/>{log.timestamp?.toDate().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</div>
                 </div>
               ))}
             </div>
@@ -253,13 +257,20 @@ export default function App() {
                   <option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>Site</option>
                 </select>
               </div>
-              <input required placeholder="Nome do Paciente" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} style={{ padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
-              <textarea placeholder="Notas e observações..." value={notasLead} onChange={e=>setNotasLead(e.target.value)} style={{ padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0', minHeight: 80, fontFamily: 'inherit' }} />
-              <input placeholder="Valor Estimado" value={valorOrcamento} onChange={handleMoneyChange} style={{ padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0', fontWeight: 800, color: theme.success }} />
-              <div style={{ display: 'flex', gap: 10 }}>
-                <input required placeholder="CEP" value={cepLead} onChange={handleCepChange} style={{ flex: 2, padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
-                <input required placeholder="Idade" type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ flex: 1, padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
+              <input required placeholder="Nome do Paciente" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} style={{ width: '100%', padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
+              <textarea placeholder="Notas e observações..." value={notasLead} onChange={e=>setNotasLead(e.target.value)} style={{ width: '100%', padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0', minHeight: 80, fontFamily: 'inherit' }} />
+              <input placeholder="Valor Estimado" value={valorOrcamento} onChange={handleMoneyChange} style={{ width: '100%', padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0', fontWeight: 800, color: theme.success }} />
+              
+              {/* CORREÇÃO DO LAYOUT CEP / IDADE */}
+              <div style={{ display: 'flex', gap: 10, width: '100%' }}>
+                <div style={{ flex: 2 }}>
+                  <input required placeholder="CEP" value={cepLead} onChange={handleCepChange} style={{ width: '100%', padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <input required placeholder="Idade" type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ width: '100%', padding: 15, borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
+                </div>
               </div>
+
               <button type="submit" disabled={isSaving} style={{ padding: 18, background: theme.primary, color: '#fff', border: 'none', borderRadius: 14, fontWeight: 800, cursor: 'pointer' }}>{isSaving ? "SALVANDO..." : "CONFIRMAR"}</button>
               <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'none', border: 'none', color: theme.gray, fontWeight: 700, cursor: 'pointer' }}>CANCELAR</button>
             </form>
