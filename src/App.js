@@ -28,9 +28,9 @@ const theme = {
 };
 
 // --- ÍCONES ---
-const IconMapPin = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
-const IconCake = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>;
-const IconStarBadge = ({ isHigh }) => <svg width="14" height="14" viewBox="0 0 24 24" fill={isHigh ? "#eab308" : "none"} stroke={isHigh ? "#eab308" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
+const IconMapPin = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+const IconCake = () => <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>;
+const IconNote = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>;
 const IconOrigin = ({ type, size = "14" }) => {
   const props = { width: size, height: size, strokeWidth: "2.5", stroke: "currentColor", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   switch (type) {
@@ -67,6 +67,7 @@ export default function App() {
   const [valorOrcamento, setValorOrcamento] = useState('');
   const [origemLead, setOrigemLead] = useState('Instagram');
   const [statusLead, setStatusLead] = useState('Aberto');
+  const [notasLead, setNotasLead] = useState(''); // NOVO ESTADO
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -97,7 +98,7 @@ export default function App() {
   };
 
   const leadsFiltrados = leads.filter(l => {
-    const matchBusca = l.nome.toLowerCase().includes(filtroBusca.toLowerCase());
+    const matchBusca = l.nome.toLowerCase().includes(filtroBusca.toLowerCase()) || (l.notas || "").toLowerCase().includes(filtroBusca.toLowerCase());
     const matchOrigem = filtroOrigem === 'Todos' || l.origem === filtroOrigem;
     const matchStatus = filtroStatus === 'Todos' || l.status === filtroStatus;
     return matchBusca && matchOrigem && matchStatus;
@@ -110,7 +111,7 @@ export default function App() {
     setTimeout(() => {
       if (newView === 'dashboard') { 
         setIdEditando(null); setNomeLead(''); setCepLead(''); setIdadeLead(''); 
-        setValorOrcamento(''); setStatusLead('Aberto'); 
+        setValorOrcamento(''); setStatusLead('Aberto'); setNotasLead('');
       }
       setView(newView);
       setAnimate(true);
@@ -125,7 +126,7 @@ export default function App() {
     const categoria = nobres.includes(cepLimpo.substring(0, 5)) && parseInt(idadeLead) >= 20 ? "HIGH TICKET" : "Ticket Médio";
 
     try {
-      const payload = { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), valor: valorOrcamento, origem: origemLead, status: statusLead, categoria, userId: user.uid };
+      const payload = { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), valor: valorOrcamento, origem: origemLead, status: statusLead, notas: notasLead, categoria, userId: user.uid };
       if (idEditando) { await updateDoc(doc(db, "leads", idEditando), payload); }
       else { await addDoc(collection(db, "leads"), { ...payload, createdAt: serverTimestamp() }); }
       navigateTo('dashboard');
@@ -150,7 +151,6 @@ export default function App() {
       <main style={{ padding: '30px 5%', maxWidth: 1100, margin: '0 auto' }} className={`fade-in ${animate ? 'active' : ''}`}>
         {view === 'dashboard' ? (
           <div>
-            {/* FAROL DE MÉTRICAS */}
             <div style={{ display: 'flex', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
                 <div style={{ flex: 1, minWidth: 150, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow }}>
                     <span style={{ fontSize: 10, color: theme.gray, fontWeight: 800 }}>LEADS FILTRADOS</span>
@@ -162,7 +162,6 @@ export default function App() {
                 </div>
             </div>
 
-            {/* FILTROS DE STATUS */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 5 }}>
               {['Todos', 'Aberto', 'Agendado', 'Em tratamento', 'Não qualificado'].map(s => (
                 <button key={s} onClick={() => setFiltroStatus(s)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: filtroStatus === s ? getStatusColor(s) : '#fff', color: filtroStatus === s ? '#fff' : theme.gray, fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: theme.shadow }}>
@@ -171,7 +170,6 @@ export default function App() {
               ))}
             </div>
 
-            {/* FILTROS DE ORIGEM */}
             <div style={{ display: 'flex', gap: 8, marginBottom: 25, overflowX: 'auto', paddingBottom: 8 }}>
               {['Todos', 'Instagram', 'Facebook', 'WhatsApp', 'Site'].map(o => (
                 <button key={o} onClick={() => setFiltroOrigem(o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 15px', borderRadius: 100, border: 'none', background: filtroOrigem === o ? theme.text : '#fff', color: filtroOrigem === o ? '#fff' : theme.gray, fontWeight: 700, fontSize: 11, cursor: 'pointer', boxShadow: theme.shadow }}>
@@ -180,7 +178,7 @@ export default function App() {
               ))}
             </div>
 
-            <input type="text" placeholder="Buscar lead..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', marginBottom: 25, boxSizing: 'border-box' }} />
+            <input type="text" placeholder="Buscar por nome ou observação..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', marginBottom: 25, boxSizing: 'border-box' }} />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
               {leadsFiltrados.map(l => (
@@ -189,11 +187,19 @@ export default function App() {
                     <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', color: getStatusColor(l.status), background: `${getStatusColor(l.status)}15`, padding: '4px 8px', borderRadius: 6 }}>
                       {l.status || 'Aberto'}
                     </span>
-                    <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setCepLead(l.cep); setIdadeLead(l.idade); setValorOrcamento(l.valor); setOrigemLead(l.origem); setStatusLead(l.status || 'Aberto'); setView('novoLead'); }} style={{ background: 'none', border: 'none', color: theme.primary, cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>EDITAR</button>
+                    <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setCepLead(l.cep); setIdadeLead(l.idade); setValorOrcamento(l.valor); setOrigemLead(l.origem); setStatusLead(l.status || 'Aberto'); setNotasLead(l.notas || ''); setView('novoLead'); }} style={{ background: 'none', border: 'none', color: theme.primary, cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>EDITAR</button>
                   </div>
                   <h4 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700 }}>{l.nome}</h4>
-                  <p style={{ margin: '0 0 15px 0', fontWeight: 800, color: theme.success, fontSize: 16 }}>{l.valor || 'R$ 0,00'}</p>
+                  <p style={{ margin: '0 0 12px 0', fontWeight: 800, color: theme.success, fontSize: 16 }}>{l.valor || 'R$ 0,00'}</p>
                   
+                  {/* EXIBIÇÃO DAS NOTAS NO CARD */}
+                  {l.notas && (
+                    <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 10, marginBottom: 15, display: 'flex', gap: 8, borderLeft: `3px solid ${theme.lightGray}` }}>
+                        <div style={{ color: theme.gray, marginTop: 2 }}><IconNote /></div>
+                        <p style={{ margin: 0, fontSize: 12, color: theme.gray, lineHeight: '1.4', fontWeight: 500 }}>{l.notas}</p>
+                    </div>
+                  )}
+
                   <div style={{ display: 'flex', gap: 12, fontSize: 10, fontWeight: 700, color: theme.gray, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IconOrigin type={l.origem} /> {l.origem}</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IconMapPin /> {l.cep}</div>
@@ -216,7 +222,7 @@ export default function App() {
                 
                 <div style={{ display: 'flex', gap: 10 }}>
                     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
-                        <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>STATUS ATUAL</label>
+                        <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>STATUS</label>
                         <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{ padding: '12px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', fontWeight: 700, color: getStatusColor(statusLead) }}>
                             <option value="Aberto">Aberto</option>
                             <option value="Agendado">Agendado</option>
@@ -235,6 +241,16 @@ export default function App() {
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
                   <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>NOME DO PACIENTE</label>
                   <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>NOTAS DE ATENDIMENTO</label>
+                  <textarea 
+                    placeholder="Ex: Tem medo de agulha, interessada em Invisalign..." 
+                    value={notasLead} 
+                    onChange={e=>setNotasLead(e.target.value)} 
+                    style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', minHeight: '80px', fontFamily: 'inherit', fontSize: '14px', resize: 'vertical' }}
+                  />
                 </div>
 
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
