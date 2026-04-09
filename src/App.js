@@ -3,6 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, deleteDoc, updateDoc } from "firebase/firestore";
 
+// --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM",
   authDomain: "klinni-ia.firebaseapp.com",
@@ -26,29 +27,18 @@ const theme = {
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
 
-// --- COMPONENTES DE ÍCONES VETORIAIS (FORÇANDO NOVOS SVGS) ---
+// --- COMPONENTES DE ÍCONES VETORIAIS (SVG) ---
 
 const IconMapPin = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-    <circle cx="12" cy="10" r="3"></circle>
-  </svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 );
 
 const IconCake = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path>
-    <path d="M2 21h20"></path>
-    <path d="M7 8v3"></path>
-    <path d="M12 8v3"></path>
-    <path d="M17 8v3"></path>
-  </svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
 );
 
 const IconStarBadge = ({ isHigh }) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill={isHigh ? "#eab308" : "none"} stroke={isHigh ? "#eab308" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
-  </svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill={isHigh ? "#eab308" : "none"} stroke={isHigh ? "#eab308" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
 );
 
 const IconOrigin = ({ type }) => {
@@ -185,14 +175,9 @@ export default function App() {
                   <h4 style={{ margin: '0 0 5px 0', fontSize: 18, fontWeight: 700 }}>{l.nome}</h4>
                   <p style={{ margin: '0 0 15px 0', fontWeight: 800, color: theme.success }}>{l.valor || 'R$ 0,00'}</p>
                   
-                  {/* RODAPÉ DO CARD COM NOVOS ÍCONES ESTILIZADOS */}
                   <div style={{ display: 'flex', gap: 14, fontSize: 11, fontWeight: 600, color: theme.gray, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <IconMapPin /> {l.cep}
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                        <IconCake /> {l.idade}a
-                    </div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><IconMapPin /> {l.cep}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><IconCake /> {l.idade}a</div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                         <IconStarBadge isHigh={l.categoria === 'HIGH TICKET'} /> 
                         <span style={{ color: l.categoria === 'HIGH TICKET' ? '#eab308' : theme.gray }}>{l.categoria}</span>
@@ -204,31 +189,39 @@ export default function App() {
           </div>
         ) : (
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
-            <div style={{ background: '#fff', padding: 35, borderRadius: 24, boxShadow: theme.shadow }}>
-              <h3 style={{ marginTop: 0 }}>{idEditando ? "Editar Lead" : "Novo Lead"}</h3>
-              <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-                <label style={{ fontSize: 12, fontWeight: 700 }}>Origem</label>
-                <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                  <option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>Site</option><option>Outros</option>
-                </select>
-                <label style={{ fontSize: 12, fontWeight: 700 }}>Nome Completo</label>
-                <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0' }} />
-                <label style={{ fontSize: 12, fontWeight: 700 }}>Orçamento (R$)</label>
-                <input value={valorOrcamento} onChange={handleMoneyChange} style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', fontWeight: 700, color: theme.success }} />
-                
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ flex: 2 }}>
-                    <label style={{ fontSize: 12, fontWeight: 700 }}>CEP</label>
-                    <input required value={cepLead} onChange={handleCepChange} style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', boxSizing: 'border-box' }} />
+            <div style={{ background: '#fff', padding: '40px 35px', borderRadius: 28, boxShadow: theme.shadow }}>
+              <h3 style={{ marginTop: 0, marginBottom: 25, fontSize: 26, fontWeight: 800, letterSpacing: '-1.2px', color: theme.text }}>
+                {idEditando ? "Editar" : "Novo"} <span style={{ color: theme.primary }}>Lead</span>
+              </h3>
+              <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Origem da Captação</label>
+                  <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#f8fafc', fontWeight: 600 }}>
+                    <option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>Site</option><option>Outros</option>
+                  </select>
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Nome Completo</label>
+                  <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Orçamento Estimado</label>
+                  <input value={valorOrcamento} onChange={handleMoneyChange} style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontWeight: 800, color: theme.success }} />
+                </div>
+                <div style={{ display: 'flex', gap: 15 }}>
+                  <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>CEP</label>
+                    <input required value={cepLead} onChange={handleCepChange} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', boxSizing: 'border-box' }} />
                   </div>
-                  <div style={{ flex: 1 }}>
-                    <label style={{ fontSize: 12, fontWeight: 700 }}>Idade</label>
-                    <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', boxSizing: 'border-box' }} />
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Idade</label>
+                    <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', boxSizing: 'border-box' }} />
                   </div>
                 </div>
-
-                <button type="submit" style={{ padding: '15px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer' }}>{isSaving ? "Salvando..." : "Salvar Dados"}</button>
-                <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'none', border: 'none', color: theme.gray, fontWeight: 600 }}>Voltar</button>
+                <button type="submit" style={{ padding: '16px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 14, fontWeight: 800, cursor: 'pointer', marginTop: 10 }}>
+                  {isSaving ? "Salvando..." : (idEditando ? "Salvar Alterações" : "Cadastrar Lead")}
+                </button>
+                <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'none', border: 'none', color: theme.gray, fontWeight: 700 }}>Cancelar</button>
               </form>
             </div>
           </div>
