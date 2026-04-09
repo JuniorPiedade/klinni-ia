@@ -3,7 +3,6 @@ import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 
-// --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM",
   authDomain: "klinni-ia.firebaseapp.com",
@@ -19,6 +18,7 @@ const theme = {
   primaryHover: "#ea580c",
   danger: "#ef4444",
   success: "#22c55e",
+  info: "#3b82f6",
   bg: "#f1f5f9",
   card: "#ffffff",
   text: "#0f172a",
@@ -27,17 +27,10 @@ const theme = {
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
 
-// --- COMPONENTES DE ÍCONES VETORIAIS ---
-const IconMapPin = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
-);
-const IconCake = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
-);
-const IconStarBadge = ({ isHigh }) => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill={isHigh ? "#eab308" : "none"} stroke={isHigh ? "#eab308" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-);
-
+// --- ÍCONES ---
+const IconMapPin = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>;
+const IconCake = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>;
+const IconStarBadge = ({ isHigh }) => <svg width="14" height="14" viewBox="0 0 24 24" fill={isHigh ? "#eab308" : "none"} stroke={isHigh ? "#eab308" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const IconOrigin = ({ type, size = "14" }) => {
   const props = { width: size, height: size, strokeWidth: "2.5", stroke: "currentColor", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   switch (type) {
@@ -45,14 +38,16 @@ const IconOrigin = ({ type, size = "14" }) => {
     case 'Facebook': return <svg {...props} viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>;
     case 'WhatsApp': return <svg {...props} viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.6 8.38 8.38 0 0 1 3.8.9L21 3z"></path></svg>;
     case 'Site': return <svg {...props} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>;
-    case 'Todos': return <svg {...props} viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>;
     default: return <svg {...props} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
   }
 };
 
-const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
-const IconStarTop = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
-const IconWallet = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.success} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M7 15h0M2 9.5h20"></path></svg>;
+const getStatusColor = (s) => {
+  if (s === 'Agendado') return theme.info;
+  if (s === 'Em tratamento') return theme.success;
+  if (s === 'Não qualificado') return theme.gray;
+  return theme.primary;
+};
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -61,14 +56,17 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [filtroBusca, setFiltroBusca] = useState('');
   const [filtroOrigem, setFiltroOrigem] = useState('Todos');
+  const [filtroStatus, setFiltroStatus] = useState('Todos');
   const [animate, setAnimate] = useState(true);
 
+  // States Formulário
   const [idEditando, setIdEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
   const [idadeLead, setIdadeLead] = useState('');
   const [valorOrcamento, setValorOrcamento] = useState('');
   const [origemLead, setOrigemLead] = useState('Instagram');
+  const [statusLead, setStatusLead] = useState('Aberto');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -101,16 +99,19 @@ export default function App() {
   const leadsFiltrados = leads.filter(l => {
     const matchBusca = l.nome.toLowerCase().includes(filtroBusca.toLowerCase());
     const matchOrigem = filtroOrigem === 'Todos' || l.origem === filtroOrigem;
-    return matchBusca && matchOrigem;
+    const matchStatus = filtroStatus === 'Todos' || l.status === filtroStatus;
+    return matchBusca && matchOrigem && matchStatus;
   });
 
-  const totalHighTicket = leadsFiltrados.filter(l => l.categoria === "HIGH TICKET").length;
   const somaOrcamentos = leadsFiltrados.reduce((acc, curr) => acc + (Number(curr.valor?.replace(/\D/g, '') || 0) / 100), 0);
 
   const navigateTo = (newView) => {
     setAnimate(false);
     setTimeout(() => {
-      if (newView === 'dashboard') { setIdEditando(null); setNomeLead(''); setCepLead(''); setIdadeLead(''); setValorOrcamento(''); }
+      if (newView === 'dashboard') { 
+        setIdEditando(null); setNomeLead(''); setCepLead(''); setIdadeLead(''); 
+        setValorOrcamento(''); setStatusLead('Aberto'); 
+      }
       setView(newView);
       setAnimate(true);
     }, 150);
@@ -124,7 +125,7 @@ export default function App() {
     const categoria = nobres.includes(cepLimpo.substring(0, 5)) && parseInt(idadeLead) >= 20 ? "HIGH TICKET" : "Ticket Médio";
 
     try {
-      const payload = { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), valor: valorOrcamento, origem: origemLead, categoria, userId: user.uid };
+      const payload = { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), valor: valorOrcamento, origem: origemLead, status: statusLead, categoria, userId: user.uid };
       if (idEditando) { await updateDoc(doc(db, "leads", idEditando), payload); }
       else { await addDoc(collection(db, "leads"), { ...payload, createdAt: serverTimestamp() }); }
       navigateTo('dashboard');
@@ -141,7 +142,7 @@ export default function App() {
       <nav style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 5%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
         <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, letterSpacing: '-1px' }}>KLINNI <span style={{ color: theme.primary }}>IA</span></h2>
         <div style={{ display: 'flex', gap: 10 }}>
-          <button onClick={() => navigateTo('dashboard')} style={{ padding: '10px 16px', background: view === 'dashboard' ? '#fff' : 'transparent', color: view === 'dashboard' ? theme.primary : theme.gray, border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, boxShadow: view === 'dashboard' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none' }}>Dashboard</button>
+          <button onClick={() => navigateTo('dashboard')} style={{ padding: '10px 16px', background: view === 'dashboard' ? '#fff' : 'transparent', color: view === 'dashboard' ? theme.primary : theme.gray, border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Dashboard</button>
           <button onClick={() => navigateTo('novoLead')} style={{ padding: '10px 18px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>+ Novo Lead</button>
         </div>
       </nav>
@@ -149,69 +150,54 @@ export default function App() {
       <main style={{ padding: '30px 5%', maxWidth: 1100, margin: '0 auto' }} className={`fade-in ${animate ? 'active' : ''}`}>
         {view === 'dashboard' ? (
           <div>
+            {/* FAROL DE MÉTRICAS */}
             <div style={{ display: 'flex', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
-              <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ background: '#fff7ed', padding: 10, borderRadius: 10 }}><IconUsers /></div>
-                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Leads</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800 }}>{leadsFiltrados.length}</h4></div>
-              </div>
-              <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ background: '#fefce8', padding: 10, borderRadius: 10 }}><IconStarTop /></div>
-                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>High Ticket</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800 }}>{totalHighTicket}</h4></div>
-              </div>
-              <div style={{ flex: 1.5, minWidth: 220, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ background: '#f0fdf4', padding: 10, borderRadius: 10 }}><IconWallet /></div>
-                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Volume Filtrado</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: theme.success }}>{somaOrcamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h4></div>
-              </div>
+                <div style={{ flex: 1, minWidth: 150, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow }}>
+                    <span style={{ fontSize: 10, color: theme.gray, fontWeight: 800 }}>LEADS FILTRADOS</span>
+                    <h4 style={{ fontSize: 22, margin: 0, fontWeight: 800 }}>{leadsFiltrados.length}</h4>
+                </div>
+                <div style={{ flex: 1.5, minWidth: 200, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow }}>
+                    <span style={{ fontSize: 10, color: theme.gray, fontWeight: 800 }}>EXPECTATIVA FINANCEIRA</span>
+                    <h4 style={{ fontSize: 22, margin: 0, fontWeight: 800, color: theme.success }}>{somaOrcamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h4>
+                </div>
             </div>
 
-            {/* FAROL DE FILTROS COM ÍCONES */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20, overflowX: 'auto', paddingBottom: 8 }}>
-              {['Todos', 'Instagram', 'Facebook', 'WhatsApp', 'Site', 'Outros'].map(origem => (
-                <button 
-                  key={origem}
-                  onClick={() => setFiltroOrigem(origem)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    padding: '10px 18px',
-                    borderRadius: '100px',
-                    border: 'none',
-                    background: filtroOrigem === origem ? theme.primary : '#fff',
-                    color: filtroOrigem === origem ? '#fff' : theme.gray,
-                    fontWeight: 700,
-                    fontSize: 12,
-                    cursor: 'pointer',
-                    whiteSpace: 'nowrap',
-                    boxShadow: theme.shadow,
-                    transition: 'all 0.2s',
-                    border: filtroOrigem === origem ? `1.5px solid ${theme.primary}` : '1.5px solid transparent'
-                  }}
-                >
-                  <IconOrigin type={origem} size="16" />
-                  {origem}
+            {/* FILTROS DE STATUS */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, overflowX: 'auto', paddingBottom: 5 }}>
+              {['Todos', 'Aberto', 'Agendado', 'Em tratamento', 'Não qualificado'].map(s => (
+                <button key={s} onClick={() => setFiltroStatus(s)} style={{ padding: '6px 14px', borderRadius: 8, border: 'none', background: filtroStatus === s ? getStatusColor(s) : '#fff', color: filtroStatus === s ? '#fff' : theme.gray, fontWeight: 700, fontSize: 11, cursor: 'pointer', whiteSpace: 'nowrap', boxShadow: theme.shadow }}>
+                  {s}
                 </button>
               ))}
             </div>
 
-            <input type="text" placeholder="Buscar pelo nome..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', marginBottom: 25, boxSizing: 'border-box' }} />
+            {/* FILTROS DE ORIGEM */}
+            <div style={{ display: 'flex', gap: 8, marginBottom: 25, overflowX: 'auto', paddingBottom: 8 }}>
+              {['Todos', 'Instagram', 'Facebook', 'WhatsApp', 'Site'].map(o => (
+                <button key={o} onClick={() => setFiltroOrigem(o)} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '8px 15px', borderRadius: 100, border: 'none', background: filtroOrigem === o ? theme.text : '#fff', color: filtroOrigem === o ? '#fff' : theme.gray, fontWeight: 700, fontSize: 11, cursor: 'pointer', boxShadow: theme.shadow }}>
+                  <IconOrigin type={o} size="14" /> {o}
+                </button>
+              ))}
+            </div>
+
+            <input type="text" placeholder="Buscar lead..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', marginBottom: 25, boxSizing: 'border-box' }} />
 
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
               {leadsFiltrados.map(l => (
-                <div key={l.id} style={{ padding: 22, background: '#fff', borderRadius: 20, boxShadow: theme.shadow }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 15 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: theme.gray, background: '#f8fafc', padding: '5px 10px', borderRadius: 8 }}>
-                      <IconOrigin type={l.origem} /><span style={{ fontSize: 10, fontWeight: 700 }}>{l.origem || 'Outros'}</span>
-                    </div>
-                    <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setCepLead(l.cep); setIdadeLead(l.idade); setValorOrcamento(l.valor); setOrigemLead(l.origem || 'Instagram'); setView('novoLead'); }} style={{ background: 'none', border: 'none', color: theme.primary, cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>Editar</button>
+                <div key={l.id} style={{ padding: 22, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, position: 'relative', borderTop: `4px solid ${getStatusColor(l.status)}` }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 10 }}>
+                    <span style={{ fontSize: 9, fontWeight: 900, textTransform: 'uppercase', color: getStatusColor(l.status), background: `${getStatusColor(l.status)}15`, padding: '4px 8px', borderRadius: 6 }}>
+                      {l.status || 'Aberto'}
+                    </span>
+                    <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setCepLead(l.cep); setIdadeLead(l.idade); setValorOrcamento(l.valor); setOrigemLead(l.origem); setStatusLead(l.status || 'Aberto'); setView('novoLead'); }} style={{ background: 'none', border: 'none', color: theme.primary, cursor: 'pointer', fontSize: 11, fontWeight: 800 }}>EDITAR</button>
                   </div>
-                  <h4 style={{ margin: '0 0 5px 0', fontSize: 18, fontWeight: 700 }}>{l.nome}</h4>
-                  <p style={{ margin: '0 0 15px 0', fontWeight: 800, color: theme.success }}>{l.valor || 'R$ 0,00'}</p>
+                  <h4 style={{ margin: '0 0 4px 0', fontSize: 18, fontWeight: 700 }}>{l.nome}</h4>
+                  <p style={{ margin: '0 0 15px 0', fontWeight: 800, color: theme.success, fontSize: 16 }}>{l.valor || 'R$ 0,00'}</p>
                   
-                  <div style={{ display: 'flex', gap: 14, fontSize: 11, fontWeight: 600, color: theme.gray, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><IconMapPin /> {l.cep}</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}><IconCake /> {l.idade}a</div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                  <div style={{ display: 'flex', gap: 12, fontSize: 10, fontWeight: 700, color: theme.gray, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IconOrigin type={l.origem} /> {l.origem}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IconMapPin /> {l.cep}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
                         <IconStarBadge isHigh={l.categoria === 'HIGH TICKET'} /> 
                         <span style={{ color: l.categoria === 'HIGH TICKET' ? '#eab308' : theme.gray }}>{l.categoria}</span>
                     </div>
@@ -223,38 +209,54 @@ export default function App() {
         ) : (
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
             <div style={{ background: '#fff', padding: '40px 35px', borderRadius: 28, boxShadow: theme.shadow }}>
-              <h3 style={{ marginTop: 0, marginBottom: 25, fontSize: 26, fontWeight: 800, letterSpacing: '-1.2px', color: theme.text }}>
+              <h3 style={{ marginTop: 0, marginBottom: 25, fontSize: 26, fontWeight: 800, letterSpacing: '-1.2px' }}>
                 {idEditando ? "Editar" : "Novo"} <span style={{ color: theme.primary }}>Lead</span>
               </h3>
-              <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Origem da Captação</label>
-                  <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: '#f8fafc', fontWeight: 600 }}>
-                    <option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>Site</option><option>Outros</option>
-                  </select>
+              <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                
+                <div style={{ display: 'flex', gap: 10 }}>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>STATUS ATUAL</label>
+                        <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{ padding: '12px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', fontWeight: 700, color: getStatusColor(statusLead) }}>
+                            <option value="Aberto">Aberto</option>
+                            <option value="Agendado">Agendado</option>
+                            <option value="Em tratamento">Em tratamento</option>
+                            <option value="Não qualificado">Não qualificado</option>
+                        </select>
+                    </div>
+                    <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                        <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>ORIGEM</label>
+                        <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{ padding: '12px', borderRadius: 10, border: '1.5px solid #e2e8f0', background: '#f8fafc', fontWeight: 700 }}>
+                            <option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>Site</option><option>Outros</option>
+                        </select>
+                    </div>
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Nome Completo</label>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>NOME DO PACIENTE</label>
                   <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0' }} />
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Orçamento Estimado</label>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+                  <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>ORÇAMENTO ESTIMADO</label>
                   <input value={valorOrcamento} onChange={handleMoneyChange} style={{ padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontWeight: 800, color: theme.success }} />
                 </div>
+
                 <div style={{ display: 'flex', gap: 15 }}>
-                  <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>CEP</label>
+                  <div style={{ flex: 2, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>CEP</label>
                     <input required value={cepLead} onChange={handleCepChange} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', boxSizing: 'border-box' }} />
                   </div>
-                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    <label style={{ fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: theme.gray, letterSpacing: '0.5px' }}>Idade</label>
+                  <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 5 }}>
+                    <label style={{ fontSize: 10, fontWeight: 800, color: theme.gray }}>IDADE</label>
                     <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ width: '100%', padding: '14px', borderRadius: 12, border: '1.5px solid #e2e8f0', boxSizing: 'border-box' }} />
                   </div>
                 </div>
-                <button type="submit" style={{ padding: '16px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 14, fontWeight: 800, cursor: 'pointer', marginTop: 10 }}>
-                  {isSaving ? "Salvando..." : (idEditando ? "Salvar Alterações" : "Cadastrar Lead")}
+
+                <button type="submit" disabled={isSaving} style={{ padding: '16px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 14, fontWeight: 800, cursor: 'pointer', marginTop: 10 }}>
+                  {isSaving ? "PROCESSANDO..." : "SALVAR ALTERAÇÕES"}
                 </button>
-                <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'none', border: 'none', color: theme.gray, fontWeight: 700 }}>Cancelar</button>
+                <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'none', border: 'none', color: theme.gray, fontWeight: 700, cursor: 'pointer' }}>CANCELAR</button>
               </form>
             </div>
           </div>
