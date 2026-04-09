@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, deleteDoc, updateDoc } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM",
@@ -16,6 +16,7 @@ const db = getFirestore(app);
 const theme = {
   primary: "#f97316",
   primaryHover: "#ea580c",
+  danger: "#ef4444",
   bg: "#f1f5f9",
   card: "#ffffff",
   text: "#0f172a",
@@ -31,6 +32,8 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [animate, setAnimate] = useState(true);
 
+  // Estados do Form
+  const [idEditando, setIdEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
   const [idadeLead, setIdadeLead] = useState('');
@@ -57,6 +60,10 @@ export default function App() {
   const navigateTo = (newView) => {
     setAnimate(false);
     setTimeout(() => {
+      if (newView !== 'novoLead') {
+        setIdEditando(null);
+        setNomeLead(''); setCepLead(''); setIdadeLead('');
+      }
       setView(newView);
       setAnimate(true);
     }, 150);
@@ -70,21 +77,46 @@ export default function App() {
     setLoginLoading(false);
   };
 
-  const handleNovoLead = async (e) => {
+  const handleSalvarLead = async (e) => {
     e.preventDefault();
     const cepLimpo = cepLead.replace(/\D/g, '');
     setIsSaving(true);
+    
     const nobres = ['40140','41940','40080','41810','41820','41760'];
     const categoria = nobres.includes(cepLimpo.substring(0, 5)) && parseInt(idadeLead) >= 20 ? "HIGH TICKET" : "Ticket Médio";
 
     try {
-      await addDoc(collection(db, "leads"), {
-        nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp()
-      });
-      setNomeLead(''); setCepLead(''); setIdadeLead('');
+      if (idEditando) {
+        // MODO EDIÇÃO
+        await updateDoc(doc(db, "leads", idEditando), {
+          nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria
+        });
+      } else {
+        // MODO CRIAÇÃO
+        await addDoc(collection(db, "leads"), {
+          nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp()
+        });
+      }
+      setNomeLead(''); setCepLead(''); setIdadeLead(''); setIdEditando(null);
       navigateTo('dashboard');
     } catch (err) { alert(err.message); }
     setIsSaving(false);
+  };
+
+  const prepararEdicao = (lead) => {
+    setIdEditando(lead.id);
+    setNomeLead(lead.nome);
+    setCepLead(lead.cep);
+    setIdadeLead(lead.idade.toString());
+    navigateTo('novoLead');
+  };
+
+  const removerLead = async (id) => {
+    if (window.confirm("Tem certeza que deseja remover este lead?")) {
+      try {
+        await deleteDoc(doc(db, "leads", id));
+      } catch (err) { alert("Erro ao remover."); }
+    }
   };
 
   if (loading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', color: theme.primary, fontWeight: 'bold' }}>Klinni IA...</div>;
@@ -97,8 +129,9 @@ export default function App() {
         input:focus { border-color: ${theme.primary} !important; outline: none; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1); }
         button { transition: all 0.2s ease; }
         button:hover { transform: translateY(-1px); filter: brightness(1.1); }
-        button:active { transform: translateY(0px); }
         input { box-sizing: border-box; width: 100%; }
+        .btn-icon { background: none; border: none; cursor: pointer; padding: 5px; border-radius: 5px; display: flex; align-items: center; justify-content: center; }
+        .btn-icon:hover { background: #f1f5f9; }
       `}</style>
 
       {!user ? (
@@ -137,7 +170,7 @@ export default function App() {
                   <div style={{ textAlign: 'center', padding: '80px 20px', background: '#fff', borderRadius: 24, boxShadow: theme.shadow }}>
                     <div style={{ fontSize: 50, marginBottom: 20 }}>🚀</div>
                     <h4 style={{ margin: '0 0 10px 0', fontSize: 20 }}>Tudo pronto para começar?</h4>
-                    <p style={{ color: theme.gray, maxWidth: 350, margin: '0 auto 25px' }}>Sua base de dados está vazia. Comece cadastrando os interessados da Tavares Odontologia ou Glamour Depil.</p>
+                    <p style={{ color: theme.gray, maxWidth: 350, margin: '0 auto 25px' }}>Sua base de dados está vazia.</p>
                     <button onClick={() => navigateTo('novoLead')} style={{ padding: '12px 24px', background: '#fef2e8', color: theme.primary, border: `1px solid ${theme.primary}`, borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Cadastrar primeiro lead</button>
                   </div>
                 ) : (
@@ -145,7 +178,15 @@ export default function App() {
                     {leads.map(l => (
                       <div key={l.id} style={{ padding: 24, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, border: '1px solid rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden' }}>
                         {l.categoria === 'HIGH TICKET' && <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: theme.primary }}></div>}
-                        <span style={{ fontSize: 10, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '5px 12px', borderRadius: 8, textTransform: 'uppercase', border: '1px solid rgba(0,0,0,0.03)' }}>{l.categoria}</span>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                          <span style={{ fontSize: 10, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '5px 12px', borderRadius: 8, textTransform: 'uppercase', border: '1px solid rgba(0,0,0,0.03)' }}>{l.categoria}</span>
+                          <div style={{ display: 'flex', gap: 5 }}>
+                            <button title="Editar" onClick={() => prepararEdicao(l)} className="btn-icon" style={{ color: theme.gray }}>✏️</button>
+                            <button title="Excluir" onClick={() => removerLead(l.id)} className="btn-icon" style={{ color: theme.danger }}>🗑️</button>
+                          </div>
+                        </div>
+
                         <h4 style={{ margin: '16px 0 6px 0', fontSize: 19, letterSpacing: '-0.5px' }}>{l.nome}</h4>
                         <div style={{ display: 'flex', gap: 12, alignItems: 'center', color: theme.gray, fontSize: 13 }}>
                            <span>📍 CEP: {l.cep}</span>
@@ -159,10 +200,10 @@ export default function App() {
             ) : (
               <div style={{ maxWidth: 480, margin: '0 auto' }}>
                 <div style={{ background: '#fff', padding: 40, borderRadius: 24, boxShadow: theme.shadow }}>
-                  <h3 style={{ marginTop: 0, fontSize: 24, fontWeight: 800 }}>Novo Cadastro</h3>
-                  <p style={{ color: theme.gray, marginBottom: 30, fontSize: 14 }}>Insira os dados do paciente para classificação automática.</p>
+                  <h3 style={{ marginTop: 0, fontSize: 24, fontWeight: 800 }}>{idEditando ? "Editar Cadastro" : "Novo Cadastro"}</h3>
+                  <p style={{ color: theme.gray, marginBottom: 30, fontSize: 14 }}>{idEditando ? "Atualize as informações do paciente." : "Insira os dados do paciente para classificação automática."}</p>
                   
-                  <form onSubmit={handleNovoLead} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+                  <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>Nome Completo</label>
                       <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
@@ -180,7 +221,7 @@ export default function App() {
                     </div>
 
                     <button type="submit" disabled={isSaving} style={{ marginTop: 10, padding: '16px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 16, boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.3)' }}>
-                      {isSaving ? "Processando..." : "Salvar Lead"}
+                      {isSaving ? "Processando..." : (idEditando ? "Atualizar Dados" : "Salvar Lead")}
                     </button>
                     <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'transparent', border: 'none', color: theme.gray, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>Cancelar e voltar</button>
                   </form>
