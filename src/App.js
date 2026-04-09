@@ -98,14 +98,15 @@ export default function App() {
         button { transition: all 0.2s ease; }
         button:hover { transform: translateY(-1px); filter: brightness(1.1); }
         button:active { transform: translateY(0px); }
-        /* Estilo para inputs ficarem enquadrados */
         input { box-sizing: border-box; width: 100%; }
       `}</style>
 
       {!user ? (
         <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
           <div style={{ padding: 40, background: '#fff', borderRadius: 24, boxShadow: theme.shadow }}>
-             <h1 style={{ fontSize: 36, fontWeight: 900, margin: '0 0 10px 0' }}>KLINNI<span style={{ color: theme.primary }}>IA</span></h1>
+             <h1 style={{ fontSize: 36, fontWeight: 900, margin: '0 0 10px 0', letterSpacing: '-1.5px' }}>
+               KLINNI <span style={{ color: theme.primary }}>IA</span>
+             </h1>
              <p style={{ color: theme.gray, marginBottom: 30 }}>Marketing inteligente para clínicas.</p>
              <button onClick={handleLogin} disabled={loginLoading} style={{ padding: '16px 48px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>
                {loginLoading ? "Verificando..." : "Entrar agora"}
@@ -115,7 +116,9 @@ export default function App() {
       ) : (
         <>
           <nav style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 5%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0 }}>KLINNI<span style={{ color: theme.primary }}>IA</span></h2>
+            <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, letterSpacing: '-1px' }}>
+              KLINNI <span style={{ color: theme.primary }}>IA</span>
+            </h2>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => navigateTo('dashboard')} style={{ padding: '10px 16px', background: view === 'dashboard' ? '#fff' : 'transparent', color: view === 'dashboard' ? theme.primary : theme.gray, border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, boxShadow: view === 'dashboard' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none' }}>Dashboard</button>
               <button onClick={() => navigateTo('novoLead')} style={{ padding: '10px 18px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>+ Novo Lead</button>
@@ -165,7 +168,6 @@ export default function App() {
                       <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                     </div>
                     
-                    {/* CONTAINER AJUSTADO E ENQUADRADO */}
                     <div style={{ display: 'flex', gap: 16, width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '70%' }}>
                         <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>CEP</label>
