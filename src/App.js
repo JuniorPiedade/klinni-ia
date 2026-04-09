@@ -59,7 +59,7 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [logs, setLogs] = useState([]);
   const [filtroBusca, setFiltroBusca] = useState('');
-  const [filtroOrigem, setFiltroOrigem] = useState('Todos');
+  const [filtroStatus, setFiltroStatus] = useState('Todos');
 
   // States Formulário
   const [idEditando, setIdEditando] = useState(null);
@@ -72,6 +72,8 @@ export default function App() {
   const [statusLead, setStatusLead] = useState('Aberto');
   const [notasLead, setNotasLead] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+
+  const STATUS_LIST = ['Todos', 'Aberto', 'Agendado', 'Em tratamento', 'Não qualificado'];
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
@@ -153,7 +155,7 @@ export default function App() {
 
   const leadsFiltrados = leads.filter(l => 
     l.nome.toLowerCase().includes(filtroBusca.toLowerCase()) && 
-    (filtroOrigem === 'Todos' || l.origem === filtroOrigem)
+    (filtroStatus === 'Todos' || l.status === filtroStatus)
   );
 
   if (loading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', color: theme.primary, fontWeight: 'bold' }}>Klinni IA...</div>;
@@ -164,6 +166,9 @@ export default function App() {
         .fade-in { opacity: 0; transform: translateY(8px); transition: all 0.2s ease; } 
         .fade-in.active { opacity: 1; transform: translateY(0); }
         .btn-whatsapp:hover { transform: scale(1.1); filter: brightness(1.1); }
+        .filter-chip { cursor: pointer; padding: 10px 18px; border-radius: 12px; background: #fff; border: 1.5px solid #e2e8f0; font-size: 11px; font-weight: 800; color: ${theme.gray}; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
+        .filter-chip:hover { border-color: ${theme.primary}; }
+        .filter-chip.active { background: ${theme.primary}10; border-color: ${theme.primary}; color: ${theme.primary}; }
       `}</style>
       
       {/* SIDEBAR */}
@@ -198,6 +203,21 @@ export default function App() {
                   {leadsFiltrados.reduce((acc, curr) => acc + (Number(curr.valor?.replace(/\D/g, '') || 0) / 100), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </h4>
               </div>
+            </div>
+
+            {/* SEÇÃO DE FILTROS POR STATUS */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10, marginBottom: 20 }}>
+                {STATUS_LIST.map(st => (
+                    <div 
+                        key={st} 
+                        className={`filter-chip ${filtroStatus === st ? 'active' : ''}`}
+                        onClick={() => setFiltroStatus(st)}
+                    >
+                        {st !== 'Todos' && <div style={{ width: 8, height: 8, borderRadius: '50%', background: getStatusColor(st) }}></div>}
+                        {st.toUpperCase()}
+                        <span style={{ marginLeft: 5, opacity: 0.5, fontSize: 10 }}>({st === 'Todos' ? leads.length : leads.filter(l => l.status === st).length})</span>
+                    </div>
+                ))}
             </div>
 
             <input type="text" placeholder="Buscar lead por nome..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: 15, border: '1px solid #e2e8f0', marginBottom: 25 }} />
