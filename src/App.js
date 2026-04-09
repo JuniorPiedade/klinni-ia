@@ -59,7 +59,10 @@ export default function App() {
   const [animate, setAnimate] = useState(true);
   const [leads, setLeads] = useState([]);
   const [logs, setLogs] = useState([]);
+  
+  // Filtros
   const [filtroBusca, setFiltroBusca] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('Todos');
 
   // States Formulário
   const [idEditando, setIdEditando] = useState(null);
@@ -96,27 +99,14 @@ export default function App() {
     return () => { unsubLeads(); unsubLogs(); };
   }, [user]);
 
-  // Funções de Arrastar (Drag & Drop)
-  const onDragStart = (e, leadId) => {
-    e.dataTransfer.setData("leadId", leadId);
-  };
-
-  const onDragOver = (e) => {
-    e.preventDefault();
-  };
-
+  const onDragStart = (e, leadId) => { e.dataTransfer.setData("leadId", leadId); };
+  const onDragOver = (e) => { e.preventDefault(); };
   const onDrop = async (e, novoStatus) => {
     const leadId = e.dataTransfer.getData("leadId");
     const lead = leads.find(l => l.id === leadId);
     if (lead && lead.status !== novoStatus) {
       await updateDoc(doc(db, "leads", leadId), { status: novoStatus });
-      await addDoc(collection(db, "logs"), { 
-        userId: user.uid, 
-        leadNome: lead.nome, 
-        statusAntigo: lead.status, 
-        statusNovo: novoStatus, 
-        timestamp: serverTimestamp() 
-      });
+      await addDoc(collection(db, "logs"), { userId: user.uid, leadNome: lead.nome, statusAntigo: lead.status, statusNovo: novoStatus, timestamp: serverTimestamp() });
     }
   };
 
@@ -175,10 +165,10 @@ export default function App() {
       <style>{`
         .fade-in { opacity: 0; transform: translateY(8px); transition: all 0.3s ease; } 
         .fade-in.active { opacity: 1; transform: translateY(0); }
-        .kanban-col { min-height: 70vh; transition: background 0.2s ease; border-radius: 15px; padding: 10px; }
-        .kanban-card:active { cursor: grabbing; transform: rotate(2deg); opacity: 0.8; }
-        .kanban-card:hover { border-color: ${theme.primary}50; }
-        ::-webkit-scrollbar { width: 6px; }
+        .kanban-col { min-height: 75vh; transition: background 0.2s ease; border-radius: 18px; padding: 12px; }
+        .kanban-card { transition: all 0.2s ease; border: 1px solid transparent; }
+        .kanban-card:active { cursor: grabbing; transform: rotate(1deg); opacity: 0.9; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
       `}</style>
       
@@ -199,56 +189,70 @@ export default function App() {
       <main style={{ flex: 1, marginLeft: 260, padding: '30px 2%' }} className={`fade-in ${animate ? 'active' : ''}`}>
         {view === 'dashboard' ? (
           <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>
-              <h3 style={{ margin: 0, fontWeight: 800 }}>Fluxo de Vendas</h3>
-              <input type="text" placeholder="Pesquisar paciente..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ padding: '10px 15px', borderRadius: 10, border: '1px solid #e2e8f0', width: 250 }} />
+            {/* CABEÇALHO COM FILTROS */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25, gap: 15 }}>
+              <h3 style={{ margin: 0, fontWeight: 800, fontSize: 22 }}>Fluxo de <span style={{ color: theme.primary }}>Vendas</span></h3>
+              
+              <div style={{ display: 'flex', gap: 10, flex: 1, justifyContent: 'flex-end' }}>
+                <select value={filtroOrigem} onChange={e => setFiltroOrigem(e.target.value)} style={{ padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: 13, fontWeight: 600 }}>
+                   <option>Todos Canais</option><option>Instagram</option><option>Facebook</option><option>WhatsApp</option><option>Site</option>
+                </select>
+                <input type="text" placeholder="Pesquisar nome..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ padding: '10px 15px', borderRadius: 10, border: '1px solid #e2e8f0', width: 200 }} />
+              </div>
             </div>
 
             {/* KANBAN BOARD */}
-            <div style={{ display: 'flex', gap: 20, overflowX: 'auto', paddingBottom: 20, alignItems: 'flex-start' }}>
+            <div style={{ display: 'flex', gap: 18, overflowX: 'auto', paddingBottom: 20, alignItems: 'flex-start' }}>
               {COLunas.map(col => (
                 <div 
                   key={col} 
                   className="kanban-col"
                   onDragOver={onDragOver}
                   onDrop={(e) => onDrop(e, col)}
-                  style={{ minWidth: 280, flex: 1, background: '#e2e8f040' }}
+                  style={{ minWidth: 280, flex: 1, background: '#e2e8f030', border: `1px dashed #cbd5e1` }}
                 >
-                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '0 10px 15px 10px' }}>
-                    <span style={{ fontWeight: 800, fontSize: 12, color: theme.gray, textTransform: 'uppercase' }}>{col}</span>
-                    <span style={{ background: '#cbd5e1', color: '#64748b', fontSize: 10, padding: '2px 8px', borderRadius: 10, fontWeight: 900 }}>
-                      {leads.filter(l => l.status === col).length}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', padding: '5px 10px 15px 10px', borderBottom: `2px solid ${getStatusColor(col)}`, marginBottom: 15 }}>
+                    <span style={{ fontWeight: 800, fontSize: 11, color: getStatusColor(col), textTransform: 'uppercase', letterSpacing: 0.5 }}>{col}</span>
+                    <span style={{ background: `${getStatusColor(col)}20`, color: getStatusColor(col), fontSize: 10, padding: '2px 8px', borderRadius: 8, fontWeight: 900 }}>
+                      {leads.filter(l => l.status === col && (filtroOrigem === 'Todos Canais' || l.origem === filtroOrigem) && l.nome.toLowerCase().includes(filtroBusca.toLowerCase())).length}
                     </span>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
                     {leads
-                      .filter(l => l.status === col && l.nome.toLowerCase().includes(filtroBusca.toLowerCase()))
+                      .filter(l => l.status === col && (filtroOrigem === 'Todos Canais' || l.origem === filtroOrigem) && l.nome.toLowerCase().includes(filtroBusca.toLowerCase()))
                       .map(l => (
                         <div 
                           key={l.id}
                           draggable
                           onDragStart={(e) => onDragStart(e, l.id)}
                           className="kanban-card"
-                          style={{ padding: 15, background: '#fff', borderRadius: 15, boxShadow: theme.shadow, borderLeft: `4px solid ${getStatusColor(l.status)}`, cursor: 'grab', position: 'relative' }}
+                          style={{ 
+                            padding: 16, 
+                            background: col === 'Não qualificado' ? '#f8fafc' : `${getStatusColor(col)}08`, 
+                            borderRadius: 16, 
+                            boxShadow: '0 2px 4px rgba(0,0,0,0.02)', 
+                            border: `1px solid ${getStatusColor(col)}20`,
+                            cursor: 'grab' 
+                          }}
                         >
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                            <h5 style={{ margin: 0, fontSize: 14, fontWeight: 700, width: '80%' }}>{l.nome}</h5>
+                            <h5 style={{ margin: 0, fontSize: 14, fontWeight: 700, color: theme.text }}>{l.nome}</h5>
                             <IconStarBadge isHigh={l.categoria === 'HIGH TICKET'} />
                           </div>
                           
-                          <p style={{ margin: '8px 0', fontSize: 13, fontWeight: 800, color: theme.success }}>{l.valor}</p>
+                          <p style={{ margin: '6px 0', fontSize: 13, fontWeight: 800, color: getStatusColor(col) }}>{l.valor}</p>
                           
-                          {l.notas && <div style={{ fontSize: 10, color: theme.gray, background: theme.bg, padding: '5px 8px', borderRadius: 6, margin: '8px 0', display: 'flex', gap: 4 }}><IconNote /> {l.notas.substring(0, 40)}...</div>}
+                          {l.notas && <div style={{ fontSize: 10, color: theme.gray, background: '#ffffff90', padding: '6px 8px', borderRadius: 8, margin: '8px 0', display: 'flex', gap: 4, border: '1px solid #f1f5f9' }}><IconNote /> {l.notas.substring(0, 45)}</div>}
                           
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 10, paddingTop: 10, borderTop: '1px solid #00000005' }}>
                             <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 9, fontWeight: 800, color: theme.gray }}>
                               <IconOrigin type={l.origem} /> {l.origem.toUpperCase()}
                             </div>
-                            <div style={{ display: 'flex', gap: 8 }}>
-                               <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setTelLead(l.telefone || ''); setCepLead(l.cep); setIdadeLead(l.idade); setValorOrcamento(l.valor); setOrigemLead(l.origem); setStatusLead(l.status); setNotasLead(l.notas || ''); navigateTo('novoLead'); }} style={{ background: 'none', border: 'none', color: theme.primary, cursor: 'pointer', fontSize: 10, fontWeight: 800 }}>EDITAR</button>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                               <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setTelLead(l.telefone || ''); setCepLead(l.cep); setIdadeLead(l.idade); setValorOrcamento(l.valor); setOrigemLead(l.origem); setStatusLead(l.status); setNotasLead(l.notas || ''); navigateTo('novoLead'); }} style={{ background: '#fff', border: '1px solid #e2e8f0', color: theme.gray, cursor: 'pointer', padding: '4px 8px', borderRadius: 6, fontSize: 9, fontWeight: 800 }}>EDITAR</button>
                                {l.telefone && (
-                                <a href={`https://wa.me/55${l.telefone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', padding: '4px', borderRadius: '50%', display: 'flex' }}>
+                                <a href={`https://wa.me/55${l.telefone.replace(/\D/g, '')}`} target="_blank" rel="noreferrer" style={{ background: '#25D366', color: '#fff', padding: '5px', borderRadius: '50%', display: 'flex', boxShadow: '0 2px 5px rgba(37,211,102,0.2)' }}>
                                   <svg width="12" height="12" viewBox="0 0 24 24" fill="white"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
                                 </a>
                                )}
