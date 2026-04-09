@@ -26,6 +26,9 @@ const theme = {
 };
 
 // --- ÍCONES SVG ---
+const IconSearch = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke={theme.gray} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)' }}><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+);
 const IconEdit = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
 );
@@ -36,10 +39,10 @@ const IconMapPin = () => (
   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 );
 const IconCake = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
 );
 const IconUsers = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
 );
 const IconStar = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
@@ -51,6 +54,7 @@ export default function App() {
   const [loginLoading, setLoginLoading] = useState(false);
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
+  const [filtroBusca, setFiltroBusca] = useState('');
   const [animate, setAnimate] = useState(true);
 
   const [idEditando, setIdEditando] = useState(null);
@@ -77,19 +81,19 @@ export default function App() {
     });
   }, [user]);
 
-  // --- FUNÇÃO DA MÁSCARA DE CEP ---
   const handleCepChange = (e) => {
-    let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
-    if (value.length > 8) value = value.slice(0, 8); // Limita a 8 dígitos
-    
-    // Aplica a máscara 00000-000
-    if (value.length > 5) {
-      value = value.replace(/^(\d{5})(\d)/, '$1-$2');
-    }
+    let value = e.target.value.replace(/\D/g, '');
+    if (value.length > 8) value = value.slice(0, 8);
+    if (value.length > 5) value = value.replace(/^(\d{5})(\d)/, '$1-$2');
     setCepLead(value);
   };
 
   const totalHighTicket = leads.filter(l => l.categoria === "HIGH TICKET").length;
+  
+  // LÓGICA DO FILTRO DE BUSCA
+  const leadsFiltrados = leads.filter(l => 
+    l.nome.toLowerCase().includes(filtroBusca.toLowerCase())
+  );
 
   const navigateTo = (newView) => {
     setAnimate(false);
@@ -103,11 +107,6 @@ export default function App() {
   const handleSalvarLead = async (e) => {
     e.preventDefault();
     const cepLimpo = cepLead.replace(/\D/g, '');
-    if (cepLimpo.length !== 8) {
-      alert("Por favor, insira um CEP válido.");
-      return;
-    }
-
     setIsSaving(true);
     const nobres = ['40140','41940','40080','41810','41820','41760'];
     const categoria = nobres.includes(cepLimpo.substring(0, 5)) && parseInt(idadeLead) >= 20 ? "HIGH TICKET" : "Ticket Médio";
@@ -182,15 +181,36 @@ export default function App() {
                   </div>
                 </div>
 
-                {leads.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '80px 20px', background: '#fff', borderRadius: 24, boxShadow: theme.shadow }}>
-                    <div style={{ fontSize: 50, marginBottom: 20 }}>🚀</div>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: 20 }}>Tudo pronto?</h4>
-                    <button onClick={() => navigateTo('novoLead')} style={{ padding: '12px 24px', background: '#fef2e8', color: theme.primary, border: `1px solid ${theme.primary}`, borderRadius: 10, fontWeight: 600 }}>Cadastrar lead</button>
+                {/* BARRA DE BUSCA ATUALIZADA */}
+                <div style={{ position: 'relative', marginBottom: 32 }}>
+                  <IconSearch />
+                  <input 
+                    type="text" 
+                    placeholder="Buscar lead pelo nome..." 
+                    value={filtroBusca}
+                    onChange={(e) => setFiltroBusca(e.target.value)}
+                    style={{ 
+                      width: '100%', 
+                      padding: '16px 16px 16px 48px', 
+                      borderRadius: 16, 
+                      border: '1px solid #e2e8f0', 
+                      background: '#fff', 
+                      fontSize: 15,
+                      boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
+                      boxSizing: 'border-box'
+                    }} 
+                  />
+                </div>
+
+                {leadsFiltrados.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: 24, boxShadow: theme.shadow }}>
+                    <div style={{ fontSize: 40, marginBottom: 15 }}>🔍</div>
+                    <h4 style={{ margin: '0 0 10px 0', color: theme.text }}>Nenhum lead encontrado</h4>
+                    <p style={{ color: theme.gray, fontSize: 14 }}>Tente outro nome ou cadastre um novo paciente.</p>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
-                    {leads.map(l => (
+                    {leadsFiltrados.map(l => (
                       <div key={l.id} style={{ padding: 24, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, border: '1px solid rgba(0,0,0,0.01)', position: 'relative', overflow: 'hidden' }}>
                         {l.categoria === 'HIGH TICKET' && <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: theme.primary }}></div>}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -222,7 +242,6 @@ export default function App() {
                     <div style={{ display: 'flex', gap: 16 }}>
                       <div style={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <label style={{ fontSize: 13, fontWeight: 700 }}>CEP</label>
-                        {/* INPUT COM MÁSCARA APLICADA */}
                         <input required value={cepLead} onChange={handleCepChange} placeholder="00000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
                       <div style={{ width: '30%', display: 'flex', flexDirection: 'column', gap: 8 }}>
