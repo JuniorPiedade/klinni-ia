@@ -77,6 +77,18 @@ export default function App() {
     });
   }, [user]);
 
+  // --- FUNÇÃO DA MÁSCARA DE CEP ---
+  const handleCepChange = (e) => {
+    let value = e.target.value.replace(/\D/g, ''); // Remove tudo que não é dígito
+    if (value.length > 8) value = value.slice(0, 8); // Limita a 8 dígitos
+    
+    // Aplica a máscara 00000-000
+    if (value.length > 5) {
+      value = value.replace(/^(\d{5})(\d)/, '$1-$2');
+    }
+    setCepLead(value);
+  };
+
   const totalHighTicket = leads.filter(l => l.categoria === "HIGH TICKET").length;
 
   const navigateTo = (newView) => {
@@ -91,15 +103,20 @@ export default function App() {
   const handleSalvarLead = async (e) => {
     e.preventDefault();
     const cepLimpo = cepLead.replace(/\D/g, '');
+    if (cepLimpo.length !== 8) {
+      alert("Por favor, insira um CEP válido.");
+      return;
+    }
+
     setIsSaving(true);
     const nobres = ['40140','41940','40080','41810','41820','41760'];
     const categoria = nobres.includes(cepLimpo.substring(0, 5)) && parseInt(idadeLead) >= 20 ? "HIGH TICKET" : "Ticket Médio";
 
     try {
       if (idEditando) {
-        await updateDoc(doc(db, "leads", idEditando), { nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria });
+        await updateDoc(doc(db, "leads", idEditando), { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), categoria });
       } else {
-        await addDoc(collection(db, "leads"), { nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "leads"), { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp() });
       }
       navigateTo('dashboard');
     } catch (err) { alert(err.message); }
@@ -148,7 +165,6 @@ export default function App() {
                   <p style={{ color: theme.gray, marginTop: 4 }}>O desempenho da sua clínica hoje.</p>
                 </header>
 
-                {/* DASHBOARD CARDS */}
                 <div style={{ display: 'flex', gap: 20, marginBottom: 40, flexWrap: 'wrap' }}>
                   <div style={{ flex: 1, minWidth: 200, background: '#fff', padding: 20, borderRadius: 20, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 15 }}>
                     <div style={{ background: '#fff7ed', padding: 12, borderRadius: 12 }}><IconUsers /></div>
@@ -206,7 +222,8 @@ export default function App() {
                     <div style={{ display: 'flex', gap: 16 }}>
                       <div style={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <label style={{ fontSize: 13, fontWeight: 700 }}>CEP</label>
-                        <input required value={cepLead} onChange={e=>setCepLead(e.target.value)} placeholder="40000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+                        {/* INPUT COM MÁSCARA APLICADA */}
+                        <input required value={cepLead} onChange={handleCepChange} placeholder="00000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
                       <div style={{ width: '30%', display: 'flex', flexDirection: 'column', gap: 8 }}>
                         <label style={{ fontSize: 13, fontWeight: 700 }}>Idade</label>
