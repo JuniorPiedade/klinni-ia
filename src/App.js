@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, deleteDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 
 // --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
@@ -27,20 +27,16 @@ const theme = {
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
 
-// --- COMPONENTES DE ÍCONES VETORIAIS (SVG) ---
-
+// --- COMPONENTES DE ÍCONES VETORIAIS ---
 const IconMapPin = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#3b82f6" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 );
-
 const IconCake = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ec4899" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
 );
-
 const IconStarBadge = ({ isHigh }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill={isHigh ? "#eab308" : "none"} stroke={isHigh ? "#eab308" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
 );
-
 const IconOrigin = ({ type }) => {
   const props = { width: "14", height: "14", strokeWidth: "2.5", stroke: "currentColor", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   switch (type) {
@@ -51,7 +47,6 @@ const IconOrigin = ({ type }) => {
     default: return <svg {...props} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
   }
 };
-
 const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
 const IconStarTop = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const IconWallet = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.success} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M7 15h0M2 9.5h20"></path></svg>;
@@ -62,6 +57,7 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   const [filtroBusca, setFiltroBusca] = useState('');
+  const [filtroOrigem, setFiltroOrigem] = useState('Todos'); // NOVO ESTADO
   const [animate, setAnimate] = useState(true);
 
   // States Formulário
@@ -88,20 +84,26 @@ export default function App() {
     });
   }, [user]);
 
-  const handleCepChange = (e) => {
-    let v = e.target.value.replace(/\D/g, '').slice(0, 8);
-    if (v.length > 5) v = v.replace(/^(\d{5})(\d)/, '$1-$2');
-    setCepLead(v);
-  };
-
   const handleMoneyChange = (e) => {
     let v = e.target.value.replace(/\D/g, '');
     v = (Number(v) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
     setValorOrcamento(v);
   };
 
-  const leadsFiltrados = leads.filter(l => l.nome.toLowerCase().includes(filtroBusca.toLowerCase()));
-  const totalHighTicket = leads.filter(l => l.categoria === "HIGH TICKET").length;
+  const handleCepChange = (e) => {
+    let v = e.target.value.replace(/\D/g, '').slice(0, 8);
+    if (v.length > 5) v = v.replace(/^(\d{5})(\d)/, '$1-$2');
+    setCepLead(v);
+  };
+
+  // LOGICA DE FILTRO COMBINADA (BUSCA + ORIGEM)
+  const leadsFiltrados = leads.filter(l => {
+    const matchBusca = l.nome.toLowerCase().includes(filtroBusca.toLowerCase());
+    const matchOrigem = filtroOrigem === 'Todos' || l.origem === filtroOrigem;
+    return matchBusca && matchOrigem;
+  });
+
+  const totalHighTicket = leadsFiltrados.filter(l => l.categoria === "HIGH TICKET").length;
   const somaOrcamentos = leadsFiltrados.reduce((acc, curr) => acc + (Number(curr.valor?.replace(/\D/g, '') || 0) / 100), 0);
 
   const navigateTo = (newView) => {
@@ -146,10 +148,11 @@ export default function App() {
       <main style={{ padding: '30px 5%', maxWidth: 1100, margin: '0 auto' }} className={`fade-in ${animate ? 'active' : ''}`}>
         {view === 'dashboard' ? (
           <div>
-            <div style={{ display: 'flex', gap: 15, marginBottom: 30, flexWrap: 'wrap' }}>
+            {/* CARDS DE MÉTRICAS (ATUALIZAM COM O FILTRO) */}
+            <div style={{ display: 'flex', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ background: '#fff7ed', padding: 10, borderRadius: 10 }}><IconUsers /></div>
-                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Leads</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800 }}>{leads.length}</h4></div>
+                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Leads</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800 }}>{leadsFiltrados.length}</h4></div>
               </div>
               <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ background: '#fefce8', padding: 10, borderRadius: 10 }}><IconStarTop /></div>
@@ -157,8 +160,33 @@ export default function App() {
               </div>
               <div style={{ flex: 1.5, minWidth: 220, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ background: '#f0fdf4', padding: 10, borderRadius: 10 }}><IconWallet /></div>
-                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Volume Total</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: theme.success }}>{somaOrcamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h4></div>
+                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Valor Filtrado</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: theme.success }}>{somaOrcamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h4></div>
               </div>
+            </div>
+
+            {/* --- FAROL DE FILTROS POR ORIGEM --- */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20, overflowX: 'auto', paddingBottom: 5 }}>
+              {['Todos', 'Instagram', 'Facebook', 'WhatsApp', 'Site', 'Outros'].map(origem => (
+                <button 
+                  key={origem}
+                  onClick={() => setFiltroOrigem(origem)}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: '100px',
+                    border: 'none',
+                    background: filtroOrigem === origem ? theme.primary : '#fff',
+                    color: filtroOrigem === origem ? '#fff' : theme.gray,
+                    fontWeight: 700,
+                    fontSize: 12,
+                    cursor: 'pointer',
+                    whiteSpace: 'nowrap',
+                    boxShadow: theme.shadow,
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {origem}
+                </button>
+              ))}
             </div>
 
             <input type="text" placeholder="Buscar pelo nome..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '15px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', marginBottom: 25, boxSizing: 'border-box' }} />
@@ -189,6 +217,7 @@ export default function App() {
           </div>
         ) : (
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
+            {/* ... MESMO FORMULÁRIO ESTILIZADO ... */}
             <div style={{ background: '#fff', padding: '40px 35px', borderRadius: 28, boxShadow: theme.shadow }}>
               <h3 style={{ marginTop: 0, marginBottom: 25, fontSize: 26, fontWeight: 800, letterSpacing: '-1.2px', color: theme.text }}>
                 {idEditando ? "Editar" : "Novo"} <span style={{ color: theme.primary }}>Lead</span>
