@@ -26,7 +26,17 @@ const theme = {
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
 
-// --- ÍCONES ---
+// --- NOVOS ÍCONES VETORIAIS (SVG) PARA O RODAPÉ DO CARD ---
+const IconPin = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+);
+const IconBirthday = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
+);
+const IconCategory = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+);
+
 const IconOrigin = ({ type }) => {
   const props = { width: "14", height: "14", strokeWidth: "2", stroke: "currentColor", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   switch (type) {
@@ -50,7 +60,6 @@ export default function App() {
   const [filtroBusca, setFiltroBusca] = useState('');
   const [animate, setAnimate] = useState(true);
 
-  // States Formulário
   const [idEditando, setIdEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
@@ -111,7 +120,7 @@ export default function App() {
       if (idEditando) { await updateDoc(doc(db, "leads", idEditando), payload); }
       else { await addDoc(collection(db, "leads"), { ...payload, createdAt: serverTimestamp() }); }
       navigateTo('dashboard');
-    } catch (err) { alert("Erro ao salvar."); }
+    } catch (err) { alert("Erro."); }
     setIsSaving(false);
   };
 
@@ -132,7 +141,6 @@ export default function App() {
       <main style={{ padding: '30px 5%', maxWidth: 1100, margin: '0 auto' }} className={`fade-in ${animate ? 'active' : ''}`}>
         {view === 'dashboard' ? (
           <div>
-            {/* O FAROL VOLTOU! */}
             <div style={{ display: 'flex', gap: 15, marginBottom: 30, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ background: '#fff7ed', padding: 10, borderRadius: 10 }}><IconUsers /></div>
@@ -161,8 +169,14 @@ export default function App() {
                   </div>
                   <h4 style={{ margin: '0 0 5px 0', fontSize: 18 }}>{l.nome}</h4>
                   <p style={{ margin: '0 0 15px 0', fontWeight: 800, color: theme.success }}>{l.valor || 'R$ 0,00'}</p>
-                  <div style={{ display: 'flex', gap: 10, fontSize: 11, color: theme.gray, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
-                    <span>📍 {l.cep}</span><span>🎂 {l.idade}a</span><span style={{ color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray }}>⭐ {l.categoria}</span>
+                  
+                  {/* RODAPÉ DO CARD COM ÍCONES VETORIAIS */}
+                  <div style={{ display: 'flex', gap: 15, fontSize: 11, color: theme.gray, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IconPin /> {l.cep}</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IconBirthday /> {l.idade}a</span>
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 4, color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray }}>
+                      <IconCategory /> {l.categoria}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -170,7 +184,8 @@ export default function App() {
           </div>
         ) : (
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
-            <div style={{ background: '#fff', padding: 35, borderRadius: 24, boxShadow: theme.shadow }}>
+             {/* ... Formulário de Cadastro (Mantido o mesmo do código anterior) ... */}
+             <div style={{ background: '#fff', padding: 35, borderRadius: 24, boxShadow: theme.shadow }}>
               <h3 style={{ marginTop: 0 }}>{idEditando ? "Editar Lead" : "Novo Lead"}</h3>
               <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
                 <label style={{ fontSize: 12, fontWeight: 700 }}>Origem</label>
@@ -182,7 +197,6 @@ export default function App() {
                 <label style={{ fontSize: 12, fontWeight: 700 }}>Orçamento (R$)</label>
                 <input value={valorOrcamento} onChange={handleMoneyChange} style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', fontWeight: 700, color: theme.success }} />
                 
-                {/* IDADE DE VOLTA NO ESQUADRO */}
                 <div style={{ display: 'flex', gap: 12 }}>
                   <div style={{ flex: 2 }}>
                     <label style={{ fontSize: 12, fontWeight: 700 }}>CEP</label>
