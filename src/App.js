@@ -25,20 +25,46 @@ const theme = {
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
 
-// ÍCONES SVG MINIMALISTAS
+// --- COMPONENTES DE ÍCONES SVG MINIMALISTAS ---
+
+// Ícones de Ação (Manter)
 const IconEdit = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
   </svg>
 );
 
 const IconTrash = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
     <polyline points="3 6 5 6 21 6"></polyline>
     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
   </svg>
 );
+
+// NOVOS Ícones de Informação (Substituindo Emojis)
+const IconMapPin = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
+    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
+    <circle cx="12" cy="10" r="3"></circle>
+  </svg>
+);
+
+const IconCake = () => (
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
+    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path>
+    <path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"></path>
+    <path d="M2 21h20"></path>
+    <path d="M7 8v3"></path>
+    <path d="M12 8v3"></path>
+    <path d="M17 8v3"></path>
+    <path d="M7 4h.01"></path>
+    <path d="M12 4h.01"></path>
+    <path d="M17 4h.01"></path>
+  </svg>
+);
+
+// --- COMPONENTE PRINCIPAL ---
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -136,15 +162,13 @@ export default function App() {
   if (loading) return <div style={{ display: 'flex', height: '100vh', alignItems: 'center', justifyContent: 'center', color: theme.primary, fontWeight: 'bold' }}>Klinni IA...</div>;
 
   return (
-    <div style={{ minHeight: '100vh', background: theme.bg, fontFamily: '"Inter", sans-serif', color: theme.text }}>
+    <div style={{ minHeight: '100vh', background: theme.bg, fontFamily: '"Inter", sans-serif', color: theme.text, letterSpacing: '-0.2px' }}>
       <style>{`
         .fade-in { opacity: 0; transform: translateY(10px); transition: all 0.3s ease-out; }
         .fade-in.active { opacity: 1; transform: translateY(0); }
         input:focus { border-color: ${theme.primary} !important; outline: none; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1); }
         button { transition: all 0.2s ease; }
-        button:hover { transform: translateY(-1px); filter: brightness(1.1); }
         input { box-sizing: border-box; width: 100%; }
-        /* Estilo para os botões de ação minimalistas */
         .btn-action { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: ${theme.gray}; transition: all 0.2s ease; }
         .btn-action:hover { background: ${theme.lightGray}; color: ${theme.text}; }
         .btn-action-danger:hover { background: #fee2e2; color: ${theme.danger}; }
@@ -178,8 +202,8 @@ export default function App() {
             {view === 'dashboard' ? (
               <div>
                 <header style={{ marginBottom: 32 }}>
-                  <h3 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Gestão de Leads</h3>
-                  <p style={{ color: theme.gray }}>Acompanhe em tempo real as oportunidades de hoje.</p>
+                  <h3 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.8px' }}>Gestão de Leads</h3>
+                  <p style={{ color: theme.gray, marginTop: 4 }}>Acompanhe em tempo real as oportunidades de hoje.</p>
                 </header>
 
                 {leads.length === 0 ? (
@@ -192,13 +216,12 @@ export default function App() {
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
                     {leads.map(l => (
-                      <div key={l.id} style={{ padding: 24, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, border: '1px solid rgba(0,0,0,0.02)', position: 'relative', overflow: 'hidden' }}>
+                      <div key={l.id} style={{ padding: 24, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, border: '1px solid rgba(0,0,0,0.01)', position: 'relative', overflow: 'hidden' }}>
                         {l.categoria === 'HIGH TICKET' && <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: theme.primary }}></div>}
                         
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                           <span style={{ fontSize: 10, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '5px 12px', borderRadius: 8, textTransform: 'uppercase', border: '1px solid rgba(0,0,0,0.03)' }}>{l.categoria}</span>
                           
-                          {/* BOTÕES DE AÇÃO ATUALIZADOS */}
                           <div style={{ display: 'flex', gap: 4 }}>
                             <button title="Editar" onClick={() => prepararEdicao(l)} className="btn-action">
                               <IconEdit />
@@ -209,10 +232,16 @@ export default function App() {
                           </div>
                         </div>
 
-                        <h4 style={{ margin: '16px 0 6px 0', fontSize: 19, letterSpacing: '-0.5px' }}>{l.nome}</h4>
-                        <div style={{ display: 'flex', gap: 12, alignItems: 'center', color: theme.gray, fontSize: 13 }}>
-                           <span>📍 CEP: {l.cep}</span>
-                           <span>🎂 {l.idade} anos</span>
+                        <h4 style={{ margin: '18px 0 8px 0', fontSize: 19, letterSpacing: '-0.5px', fontWeight: 700 }}>{l.nome}</h4>
+                        
+                        {/* SEÇÃO DE INFOS ATUALIZADA COM ÍCONES VETORIAIS */}
+                        <div style={{ display: 'flex', gap: 16, alignItems: 'center', color: theme.gray, fontSize: 13, fontWeight: 500 }}>
+                           <span style={{ display: 'flex', alignItems: 'center' }}>
+                             <IconMapPin /> {l.cep}
+                           </span>
+                           <span style={{ display: 'flex', alignItems: 'center' }}>
+                             <IconCake /> {l.idade} anos
+                           </span>
                         </div>
                       </div>
                     ))}
@@ -222,23 +251,23 @@ export default function App() {
             ) : (
               <div style={{ maxWidth: 480, margin: '0 auto' }}>
                 <div style={{ background: '#fff', padding: 40, borderRadius: 24, boxShadow: theme.shadow }}>
-                  <h3 style={{ marginTop: 0, fontSize: 24, fontWeight: 800 }}>{idEditando ? "Editar Cadastro" : "Novo Cadastro"}</h3>
-                  <p style={{ color: theme.gray, marginBottom: 30, fontSize: 14 }}>{idEditando ? "Atualize as informações do paciente." : "Insira os dados do paciente para classificação automática."}</p>
+                  <h3 style={{ marginTop: 0, fontSize: 24, fontWeight: 800, letterSpacing: '-0.5px' }}>{idEditando ? "Editar Cadastro" : "Novo Cadastro"}</h3>
+                  <p style={{ color: theme.gray, marginBottom: 30, fontSize: 14 }}>{idEditando ? "Atualize as informações do paciente Tavares Odontologia." : "Insira os dados do paciente para classificação automática."}</p>
                   
                   <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                       <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>Nome Completo</label>
-                      <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+                      <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 14 }} />
                     </div>
                     
                     <div style={{ display: 'flex', gap: 16, width: '100%' }}>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '70%' }}>
                         <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>CEP</label>
-                        <input required value={cepLead} onChange={e=>setCepLead(e.target.value)} placeholder="40000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+                        <input required value={cepLead} onChange={e=>setCepLead(e.target.value)} placeholder="40000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 14 }} />
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '30%' }}>
                         <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>Idade</label>
-                        <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} placeholder="Ex: 30" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+                        <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} placeholder="Ex: 30" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 14 }} />
                       </div>
                     </div>
 
