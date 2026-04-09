@@ -37,16 +37,19 @@ const IconCake = () => (
 const IconStarBadge = ({ isHigh }) => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill={isHigh ? "#eab308" : "none"} stroke={isHigh ? "#eab308" : "#94a3b8"} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
 );
-const IconOrigin = ({ type }) => {
-  const props = { width: "14", height: "14", strokeWidth: "2.5", stroke: "currentColor", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
+
+const IconOrigin = ({ type, size = "14" }) => {
+  const props = { width: size, height: size, strokeWidth: "2.5", stroke: "currentColor", fill: "none", strokeLinecap: "round", strokeLinejoin: "round" };
   switch (type) {
     case 'Instagram': return <svg {...props} viewBox="0 0 24 24"><rect x="2" y="2" width="20" height="20" rx="5" ry="5"></rect><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"></path><line x1="17.5" y1="6.5" x2="17.51" y2="6.5"></line></svg>;
     case 'Facebook': return <svg {...props} viewBox="0 0 24 24"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"></path></svg>;
     case 'WhatsApp': return <svg {...props} viewBox="0 0 24 24"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 1 1-7.6-10.6 8.38 8.38 0 0 1 3.8.9L21 3z"></path></svg>;
     case 'Site': return <svg {...props} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>;
+    case 'Todos': return <svg {...props} viewBox="0 0 24 24"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path><polyline points="16 6 12 2 8 6"></polyline><line x1="12" y1="2" x2="12" y2="15"></line></svg>;
     default: return <svg {...props} viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>;
   }
 };
+
 const IconUsers = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>;
 const IconStarTop = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>;
 const IconWallet = () => <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.success} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M7 15h0M2 9.5h20"></path></svg>;
@@ -57,10 +60,9 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   const [filtroBusca, setFiltroBusca] = useState('');
-  const [filtroOrigem, setFiltroOrigem] = useState('Todos'); // NOVO ESTADO
+  const [filtroOrigem, setFiltroOrigem] = useState('Todos');
   const [animate, setAnimate] = useState(true);
 
-  // States Formulário
   const [idEditando, setIdEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
@@ -96,7 +98,6 @@ export default function App() {
     setCepLead(v);
   };
 
-  // LOGICA DE FILTRO COMBINADA (BUSCA + ORIGEM)
   const leadsFiltrados = leads.filter(l => {
     const matchBusca = l.nome.toLowerCase().includes(filtroBusca.toLowerCase());
     const matchOrigem = filtroOrigem === 'Todos' || l.origem === filtroOrigem;
@@ -148,7 +149,6 @@ export default function App() {
       <main style={{ padding: '30px 5%', maxWidth: 1100, margin: '0 auto' }} className={`fade-in ${animate ? 'active' : ''}`}>
         {view === 'dashboard' ? (
           <div>
-            {/* CARDS DE MÉTRICAS (ATUALIZAM COM O FILTRO) */}
             <div style={{ display: 'flex', gap: 15, marginBottom: 25, flexWrap: 'wrap' }}>
               <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ background: '#fff7ed', padding: 10, borderRadius: 10 }}><IconUsers /></div>
@@ -160,18 +160,21 @@ export default function App() {
               </div>
               <div style={{ flex: 1.5, minWidth: 220, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
                 <div style={{ background: '#f0fdf4', padding: 10, borderRadius: 10 }}><IconWallet /></div>
-                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Valor Filtrado</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: theme.success }}>{somaOrcamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h4></div>
+                <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Volume Filtrado</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: theme.success }}>{somaOrcamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h4></div>
               </div>
             </div>
 
-            {/* --- FAROL DE FILTROS POR ORIGEM --- */}
-            <div style={{ display: 'flex', gap: 10, marginBottom: 20, overflowX: 'auto', paddingBottom: 5 }}>
+            {/* FAROL DE FILTROS COM ÍCONES */}
+            <div style={{ display: 'flex', gap: 10, marginBottom: 20, overflowX: 'auto', paddingBottom: 8 }}>
               {['Todos', 'Instagram', 'Facebook', 'WhatsApp', 'Site', 'Outros'].map(origem => (
                 <button 
                   key={origem}
                   onClick={() => setFiltroOrigem(origem)}
                   style={{
-                    padding: '8px 16px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 8,
+                    padding: '10px 18px',
                     borderRadius: '100px',
                     border: 'none',
                     background: filtroOrigem === origem ? theme.primary : '#fff',
@@ -181,9 +184,11 @@ export default function App() {
                     cursor: 'pointer',
                     whiteSpace: 'nowrap',
                     boxShadow: theme.shadow,
-                    transition: 'all 0.2s'
+                    transition: 'all 0.2s',
+                    border: filtroOrigem === origem ? `1.5px solid ${theme.primary}` : '1.5px solid transparent'
                   }}
                 >
+                  <IconOrigin type={origem} size="16" />
                   {origem}
                 </button>
               ))}
@@ -217,7 +222,6 @@ export default function App() {
           </div>
         ) : (
           <div style={{ maxWidth: 480, margin: '0 auto' }}>
-            {/* ... MESMO FORMULÁRIO ESTILIZADO ... */}
             <div style={{ background: '#fff', padding: '40px 35px', borderRadius: 28, boxShadow: theme.shadow }}>
               <h3 style={{ marginTop: 0, marginBottom: 25, fontSize: 26, fontWeight: 800, letterSpacing: '-1.2px', color: theme.text }}>
                 {idEditando ? "Editar" : "Novo"} <span style={{ color: theme.primary }}>Lead</span>
