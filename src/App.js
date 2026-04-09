@@ -17,6 +17,7 @@ const theme = {
   primary: "#f97316",
   primaryHover: "#ea580c",
   danger: "#ef4444",
+  success: "#22c55e",
   bg: "#f1f5f9",
   card: "#ffffff",
   text: "#0f172a",
@@ -36,16 +37,19 @@ const IconTrash = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
 );
 const IconMapPin = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 );
 const IconCake = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 4 }}><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M2 21h20"></path></svg>
 );
 const IconUsers = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle></svg>
 );
 const IconStar = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+);
+const IconWallet = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.success} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="4" width="20" height="16" rx="2"></rect><path d="M7 15h0M2 9.5h20"></path></svg>
 );
 
 export default function App() {
@@ -61,6 +65,7 @@ export default function App() {
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
   const [idadeLead, setIdadeLead] = useState('');
+  const [valorOrcamento, setValorOrcamento] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
@@ -81,6 +86,7 @@ export default function App() {
     });
   }, [user]);
 
+  // --- MÁSCARAS ---
   const handleCepChange = (e) => {
     let value = e.target.value.replace(/\D/g, '');
     if (value.length > 8) value = value.slice(0, 8);
@@ -88,17 +94,25 @@ export default function App() {
     setCepLead(value);
   };
 
+  const handleMoneyChange = (e) => {
+    let value = e.target.value.replace(/\D/g, '');
+    value = (Number(value) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+    setValorOrcamento(value);
+  };
+
   const totalHighTicket = leads.filter(l => l.categoria === "HIGH TICKET").length;
+  const leadsFiltrados = leads.filter(l => l.nome.toLowerCase().includes(filtroBusca.toLowerCase()));
   
-  // LÓGICA DO FILTRO DE BUSCA
-  const leadsFiltrados = leads.filter(l => 
-    l.nome.toLowerCase().includes(filtroBusca.toLowerCase())
-  );
+  // SOMA TOTAL DOS ORÇAMENTOS
+  const somaOrcamentos = leadsFiltrados.reduce((acc, curr) => {
+    const val = typeof curr.valor === 'string' ? Number(curr.valor.replace(/\D/g, '')) / 100 : 0;
+    return acc + val;
+  }, 0);
 
   const navigateTo = (newView) => {
     setAnimate(false);
     setTimeout(() => {
-      if (newView !== 'novoLead') { setIdEditando(null); setNomeLead(''); setCepLead(''); setIdadeLead(''); }
+      if (newView !== 'novoLead') { setIdEditando(null); setNomeLead(''); setCepLead(''); setIdadeLead(''); setValorOrcamento(''); }
       setView(newView);
       setAnimate(true);
     }, 150);
@@ -112,18 +126,19 @@ export default function App() {
     const categoria = nobres.includes(cepLimpo.substring(0, 5)) && parseInt(idadeLead) >= 20 ? "HIGH TICKET" : "Ticket Médio";
 
     try {
+      const payload = { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), valor: valorOrcamento, categoria, userId: user.uid };
       if (idEditando) {
-        await updateDoc(doc(db, "leads", idEditando), { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), categoria });
+        await updateDoc(doc(db, "leads", idEditando), payload);
       } else {
-        await addDoc(collection(db, "leads"), { nome: nomeLead, cep: cepLead, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp() });
+        await addDoc(collection(db, "leads"), { ...payload, createdAt: serverTimestamp() });
       }
       navigateTo('dashboard');
-    } catch (err) { alert(err.message); }
+    } catch (err) { alert("Erro ao salvar."); }
     setIsSaving(false);
   };
 
   const prepararEdicao = (lead) => {
-    setIdEditando(lead.id); setNomeLead(lead.nome); setCepLead(lead.cep); setIdadeLead(lead.idade.toString());
+    setIdEditando(lead.id); setNomeLead(lead.nome); setCepLead(lead.cep); setIdadeLead(lead.idade.toString()); setValorOrcamento(lead.valor || '');
     navigateTo('novoLead');
   };
 
@@ -156,103 +171,81 @@ export default function App() {
             </div>
           </nav>
 
-          <main style={{ padding: '40px 5%', maxWidth: 1100, margin: '0 auto' }} className={`fade-in ${animate ? 'active' : ''}`}>
+          <main style={{ padding: '30px 5%', maxWidth: 1200, margin: '0 auto' }} className={`fade-in ${animate ? 'active' : ''}`}>
             {view === 'dashboard' ? (
               <div>
-                <header style={{ marginBottom: 32 }}>
-                  <h3 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Gestão de Leads</h3>
-                  <p style={{ color: theme.gray, marginTop: 4 }}>O desempenho da sua clínica hoje.</p>
-                </header>
-
-                <div style={{ display: 'flex', gap: 20, marginBottom: 40, flexWrap: 'wrap' }}>
-                  <div style={{ flex: 1, minWidth: 200, background: '#fff', padding: 20, borderRadius: 20, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 15 }}>
-                    <div style={{ background: '#fff7ed', padding: 12, borderRadius: 12 }}><IconUsers /></div>
-                    <div>
-                      <span style={{ fontSize: 12, color: theme.gray, fontWeight: 600, textTransform: 'uppercase' }}>Total de Leads</span>
-                      <h4 style={{ fontSize: 24, margin: 0, fontWeight: 800 }}>{leads.length}</h4>
-                    </div>
+                {/* DASHBOARD CARDS ATUALIZADOS */}
+                <div style={{ display: 'flex', gap: 15, marginBottom: 30, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ background: '#fff7ed', padding: 10, borderRadius: 10 }}><IconUsers /></div>
+                    <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Leads</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800 }}>{leads.length}</h4></div>
                   </div>
-                  <div style={{ flex: 1, minWidth: 200, background: '#fff', padding: 20, borderRadius: 20, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 15 }}>
-                    <div style={{ background: '#fefce8', padding: 12, borderRadius: 12 }}><IconStar /></div>
-                    <div>
-                      <span style={{ fontSize: 12, color: theme.gray, fontWeight: 600, textTransform: 'uppercase' }}>High Ticket</span>
-                      <h4 style={{ fontSize: 24, margin: 0, fontWeight: 800 }}>{totalHighTicket}</h4>
-                    </div>
+                  <div style={{ flex: 1, minWidth: 180, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ background: '#fefce8', padding: 10, borderRadius: 10 }}><IconStar /></div>
+                    <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>High Ticket</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800 }}>{totalHighTicket}</h4></div>
+                  </div>
+                  <div style={{ flex: 1.5, minWidth: 220, background: '#fff', padding: 18, borderRadius: 18, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ background: '#f0fdf4', padding: 10, borderRadius: 10 }}><IconWallet /></div>
+                    <div><span style={{ fontSize: 11, color: theme.gray, fontWeight: 700, textTransform: 'uppercase' }}>Volume em Caixa</span><h4 style={{ fontSize: 20, margin: 0, fontWeight: 800, color: theme.success }}>{somaOrcamentos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</h4></div>
                   </div>
                 </div>
 
-                {/* BARRA DE BUSCA ATUALIZADA */}
-                <div style={{ position: 'relative', marginBottom: 32 }}>
+                <div style={{ position: 'relative', marginBottom: 25 }}>
                   <IconSearch />
-                  <input 
-                    type="text" 
-                    placeholder="Buscar lead pelo nome..." 
-                    value={filtroBusca}
-                    onChange={(e) => setFiltroBusca(e.target.value)}
-                    style={{ 
-                      width: '100%', 
-                      padding: '16px 16px 16px 48px', 
-                      borderRadius: 16, 
-                      border: '1px solid #e2e8f0', 
-                      background: '#fff', 
-                      fontSize: 15,
-                      boxShadow: '0 2px 10px rgba(0,0,0,0.02)',
-                      boxSizing: 'border-box'
-                    }} 
-                  />
+                  <input type="text" placeholder="Buscar pelo nome..." value={filtroBusca} onChange={(e) => setFiltroBusca(e.target.value)} style={{ width: '100%', padding: '14px 14px 14px 44px', borderRadius: 14, border: '1px solid #e2e8f0', background: '#fff', fontSize: 14, boxSizing: 'border-box' }} />
                 </div>
 
-                {leadsFiltrados.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '60px 20px', background: '#fff', borderRadius: 24, boxShadow: theme.shadow }}>
-                    <div style={{ fontSize: 40, marginBottom: 15 }}>🔍</div>
-                    <h4 style={{ margin: '0 0 10px 0', color: theme.text }}>Nenhum lead encontrado</h4>
-                    <p style={{ color: theme.gray, fontSize: 14 }}>Tente outro nome ou cadastre um novo paciente.</p>
-                  </div>
-                ) : (
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
-                    {leadsFiltrados.map(l => (
-                      <div key={l.id} style={{ padding: 24, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, border: '1px solid rgba(0,0,0,0.01)', position: 'relative', overflow: 'hidden' }}>
-                        {l.categoria === 'HIGH TICKET' && <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: theme.primary }}></div>}
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '5px 12px', borderRadius: 8, textTransform: 'uppercase' }}>{l.categoria}</span>
-                          <div style={{ display: 'flex', gap: 4 }}>
-                            <button onClick={() => prepararEdicao(l)} className="btn-action"><IconEdit /></button>
-                            <button onClick={() => removerLead(l.id)} className="btn-action btn-action-danger"><IconTrash /></button>
-                          </div>
-                        </div>
-                        <h4 style={{ margin: '18px 0 8px 0', fontSize: 19, fontWeight: 700 }}>{l.nome}</h4>
-                        <div style={{ display: 'flex', gap: 16, color: theme.gray, fontSize: 13, fontWeight: 500 }}>
-                           <span style={{ display: 'flex', alignItems: 'center' }}><IconMapPin /> {l.cep}</span>
-                           <span style={{ display: 'flex', alignItems: 'center' }}><IconCake /> {l.idade} anos</span>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 20 }}>
+                  {leadsFiltrados.map(l => (
+                    <div key={l.id} style={{ padding: 22, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, border: '1px solid rgba(0,0,0,0.01)', position: 'relative' }}>
+                      {l.categoria === 'HIGH TICKET' && <div style={{ position: 'absolute', top: 15, right: 15, width: 8, height: 8, borderRadius: '50%', background: theme.primary }}></div>}
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                        <span style={{ fontSize: 9, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '4px 10px', borderRadius: 6, textTransform: 'uppercase' }}>{l.categoria}</span>
+                        <div style={{ display: 'flex', gap: 2 }}>
+                          <button onClick={() => prepararEdicao(l)} className="btn-action"><IconEdit /></button>
+                          <button onClick={() => removerLead(l.id)} className="btn-action btn-action-danger"><IconTrash /></button>
                         </div>
                       </div>
-                    ))}
-                  </div>
-                )}
+                      <h4 style={{ margin: '14px 0 4px 0', fontSize: 18, fontWeight: 700 }}>{l.nome}</h4>
+                      <p style={{ margin: '0 0 12px 0', fontSize: 16, fontWeight: 700, color: theme.success }}>{l.valor || 'R$ 0,00'}</p>
+                      <div style={{ display: 'flex', gap: 12, color: theme.gray, fontSize: 12, fontWeight: 500, borderTop: '1px solid #f8fafc', paddingTop: 12 }}>
+                         <span style={{ display: 'flex', alignItems: 'center' }}><IconMapPin /> {l.cep}</span>
+                         <span style={{ display: 'flex', alignItems: 'center' }}><IconCake /> {l.idade} anos</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             ) : (
               <div style={{ maxWidth: 480, margin: '0 auto' }}>
-                <div style={{ background: '#fff', padding: 40, borderRadius: 24, boxShadow: theme.shadow }}>
-                  <h3 style={{ marginTop: 0, fontSize: 24, fontWeight: 800 }}>{idEditando ? "Editar Cadastro" : "Novo Cadastro"}</h3>
-                  <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <label style={{ fontSize: 13, fontWeight: 700 }}>Nome Completo</label>
-                      <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+                <div style={{ background: '#fff', padding: 35, borderRadius: 24, boxShadow: theme.shadow }}>
+                  <h3 style={{ marginTop: 0, fontSize: 22, fontWeight: 800 }}>{idEditando ? "Editar Lead" : "Novo Lead"}</h3>
+                  <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: 12, fontWeight: 700 }}>Nome Completo</label>
+                      <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                     </div>
-                    <div style={{ display: 'flex', gap: 16 }}>
-                      <div style={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <label style={{ fontSize: 13, fontWeight: 700 }}>CEP</label>
-                        <input required value={cepLead} onChange={handleCepChange} placeholder="00000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+                    
+                    {/* CAMPO DE VALOR COM MÁSCARA */}
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <label style={{ fontSize: 12, fontWeight: 700 }}>Orçamento Estimado (R$)</label>
+                      <input value={valorOrcamento} onChange={handleMoneyChange} placeholder="R$ 0,00" style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc', color: theme.success, fontWeight: 700 }} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 12 }}>
+                      <div style={{ width: '65%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: 12, fontWeight: 700 }}>CEP</label>
+                        <input required value={cepLead} onChange={handleCepChange} placeholder="00000-000" style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
-                      <div style={{ width: '30%', display: 'flex', flexDirection: 'column', gap: 8 }}>
-                        <label style={{ fontSize: 13, fontWeight: 700 }}>Idade</label>
-                        <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
+                      <div style={{ width: '35%', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        <label style={{ fontSize: 12, fontWeight: 700 }}>Idade</label>
+                        <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
                     </div>
-                    <button type="submit" disabled={isSaving} style={{ padding: '16px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700, boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.3)' }}>
-                      {isSaving ? "Processando..." : (idEditando ? "Atualizar Dados" : "Salvar Lead")}
+                    <button type="submit" disabled={isSaving} style={{ marginTop: 10, padding: '14px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700 }}>
+                      {isSaving ? "Salvando..." : (idEditando ? "Atualizar" : "Salvar Lead")}
                     </button>
-                    <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'transparent', border: 'none', color: theme.gray, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
+                    <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'transparent', border: 'none', color: theme.gray, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Voltar</button>
                   </form>
                 </div>
               </div>
