@@ -25,46 +25,25 @@ const theme = {
   shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07), 0 2px 6px -2px rgba(0, 0, 0, 0.05)"
 };
 
-// --- COMPONENTES DE ÍCONES SVG MINIMALISTAS ---
-
-// Ícones de Ação (Manter)
+// --- ÍCONES SVG ---
 const IconEdit = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
-  </svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path></svg>
 );
-
 const IconTrash = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 6 5 6 21 6"></polyline>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-  </svg>
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
 );
-
-// NOVOS Ícones de Informação (Substituindo Emojis)
 const IconMapPin = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
-    <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
-    <circle cx="12" cy="10" r="3"></circle>
-  </svg>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
 );
-
 const IconCake = () => (
-  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}>
-    <path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path>
-    <path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"></path>
-    <path d="M2 21h20"></path>
-    <path d="M7 8v3"></path>
-    <path d="M12 8v3"></path>
-    <path d="M17 8v3"></path>
-    <path d="M7 4h.01"></path>
-    <path d="M12 4h.01"></path>
-    <path d="M17 4h.01"></path>
-  </svg>
+  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: 5 }}><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"></path><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"></path><path d="M2 21h20"></path><path d="M7 8v3"></path><path d="M12 8v3"></path><path d="M17 8v3"></path></svg>
 );
-
-// --- COMPONENTE PRINCIPAL ---
+const IconUsers = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={theme.primary} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+);
+const IconStar = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#eab308" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
+);
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -74,7 +53,6 @@ export default function App() {
   const [leads, setLeads] = useState([]);
   const [animate, setAnimate] = useState(true);
 
-  // Estados do Form
   const [idEditando, setIdEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
@@ -99,63 +77,43 @@ export default function App() {
     });
   }, [user]);
 
+  const totalHighTicket = leads.filter(l => l.categoria === "HIGH TICKET").length;
+
   const navigateTo = (newView) => {
     setAnimate(false);
     setTimeout(() => {
-      if (newView !== 'novoLead') {
-        setIdEditando(null);
-        setNomeLead(''); setCepLead(''); setIdadeLead('');
-      }
+      if (newView !== 'novoLead') { setIdEditando(null); setNomeLead(''); setCepLead(''); setIdadeLead(''); }
       setView(newView);
       setAnimate(true);
     }, 150);
-  };
-
-  const handleLogin = async () => {
-    setLoginLoading(true);
-    try {
-      await signInWithEmailAndPassword(auth, "teste@teste.com", "123456");
-    } catch (err) { alert("Erro ao acessar."); }
-    setLoginLoading(false);
   };
 
   const handleSalvarLead = async (e) => {
     e.preventDefault();
     const cepLimpo = cepLead.replace(/\D/g, '');
     setIsSaving(true);
-    
     const nobres = ['40140','41940','40080','41810','41820','41760'];
     const categoria = nobres.includes(cepLimpo.substring(0, 5)) && parseInt(idadeLead) >= 20 ? "HIGH TICKET" : "Ticket Médio";
 
     try {
       if (idEditando) {
-        await updateDoc(doc(db, "leads", idEditando), {
-          nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria
-        });
+        await updateDoc(doc(db, "leads", idEditando), { nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria });
       } else {
-        await addDoc(collection(db, "leads"), {
-          nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp()
-        });
+        await addDoc(collection(db, "leads"), { nome: nomeLead, cep: cepLimpo, idade: parseInt(idadeLead), categoria, userId: user.uid, createdAt: serverTimestamp() });
       }
-      setNomeLead(''); setCepLead(''); setIdadeLead(''); setIdEditando(null);
       navigateTo('dashboard');
     } catch (err) { alert(err.message); }
     setIsSaving(false);
   };
 
   const prepararEdicao = (lead) => {
-    setIdEditando(lead.id);
-    setNomeLead(lead.nome);
-    setCepLead(lead.cep);
-    setIdadeLead(lead.idade.toString());
+    setIdEditando(lead.id); setNomeLead(lead.nome); setCepLead(lead.cep); setIdadeLead(lead.idade.toString());
     navigateTo('novoLead');
   };
 
   const removerLead = async (id) => {
-    if (window.confirm("Tem certeza que deseja remover este lead?")) {
-      try {
-        await deleteDoc(doc(db, "leads", id));
-      } catch (err) { alert("Erro ao remover."); }
+    if (window.confirm("Remover este lead?")) {
+      try { await deleteDoc(doc(db, "leads", id)); } catch (err) { alert("Erro."); }
     }
   };
 
@@ -167,31 +125,15 @@ export default function App() {
         .fade-in { opacity: 0; transform: translateY(10px); transition: all 0.3s ease-out; }
         .fade-in.active { opacity: 1; transform: translateY(0); }
         input:focus { border-color: ${theme.primary} !important; outline: none; box-shadow: 0 0 0 3px rgba(249, 115, 22, 0.1); }
-        button { transition: all 0.2s ease; }
-        input { box-sizing: border-box; width: 100%; }
         .btn-action { background: none; border: none; cursor: pointer; padding: 6px; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: ${theme.gray}; transition: all 0.2s ease; }
         .btn-action:hover { background: ${theme.lightGray}; color: ${theme.text}; }
         .btn-action-danger:hover { background: #fee2e2; color: ${theme.danger}; }
       `}</style>
 
-      {!user ? (
-        <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', textAlign: 'center' }}>
-          <div style={{ padding: 40, background: '#fff', borderRadius: 24, boxShadow: theme.shadow }}>
-             <h1 style={{ fontSize: 36, fontWeight: 900, margin: '0 0 10px 0', letterSpacing: '-1.5px' }}>
-               KLINNI <span style={{ color: theme.primary }}>IA</span>
-             </h1>
-             <p style={{ color: theme.gray, marginBottom: 30 }}>Marketing inteligente para clínicas.</p>
-             <button onClick={handleLogin} disabled={loginLoading} style={{ padding: '16px 48px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 16 }}>
-               {loginLoading ? "Verificando..." : "Entrar agora"}
-             </button>
-          </div>
-        </div>
-      ) : (
+      {user && (
         <>
           <nav style={{ position: 'sticky', top: 0, zIndex: 10, display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 5%', background: 'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderBottom: '1px solid rgba(0,0,0,0.05)' }}>
-            <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, letterSpacing: '-1px' }}>
-              KLINNI <span style={{ color: theme.primary }}>IA</span>
-            </h2>
+            <h2 style={{ fontSize: 20, fontWeight: 800, margin: 0, letterSpacing: '-1px' }}>KLINNI <span style={{ color: theme.primary }}>IA</span></h2>
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={() => navigateTo('dashboard')} style={{ padding: '10px 16px', background: view === 'dashboard' ? '#fff' : 'transparent', color: view === 'dashboard' ? theme.primary : theme.gray, border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600, boxShadow: view === 'dashboard' ? '0 2px 5px rgba(0,0,0,0.05)' : 'none' }}>Dashboard</button>
               <button onClick={() => navigateTo('novoLead')} style={{ padding: '10px 18px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>+ Novo Lead</button>
@@ -202,46 +144,50 @@ export default function App() {
             {view === 'dashboard' ? (
               <div>
                 <header style={{ marginBottom: 32 }}>
-                  <h3 style={{ fontSize: 28, fontWeight: 800, margin: 0, letterSpacing: '-0.8px' }}>Gestão de Leads</h3>
-                  <p style={{ color: theme.gray, marginTop: 4 }}>Acompanhe em tempo real as oportunidades de hoje.</p>
+                  <h3 style={{ fontSize: 28, fontWeight: 800, margin: 0 }}>Gestão de Leads</h3>
+                  <p style={{ color: theme.gray, marginTop: 4 }}>O desempenho da sua clínica hoje.</p>
                 </header>
+
+                {/* DASHBOARD CARDS */}
+                <div style={{ display: 'flex', gap: 20, marginBottom: 40, flexWrap: 'wrap' }}>
+                  <div style={{ flex: 1, minWidth: 200, background: '#fff', padding: 20, borderRadius: 20, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 15 }}>
+                    <div style={{ background: '#fff7ed', padding: 12, borderRadius: 12 }}><IconUsers /></div>
+                    <div>
+                      <span style={{ fontSize: 12, color: theme.gray, fontWeight: 600, textTransform: 'uppercase' }}>Total de Leads</span>
+                      <h4 style={{ fontSize: 24, margin: 0, fontWeight: 800 }}>{leads.length}</h4>
+                    </div>
+                  </div>
+                  <div style={{ flex: 1, minWidth: 200, background: '#fff', padding: 20, borderRadius: 20, boxShadow: theme.shadow, display: 'flex', alignItems: 'center', gap: 15 }}>
+                    <div style={{ background: '#fefce8', padding: 12, borderRadius: 12 }}><IconStar /></div>
+                    <div>
+                      <span style={{ fontSize: 12, color: theme.gray, fontWeight: 600, textTransform: 'uppercase' }}>High Ticket</span>
+                      <h4 style={{ fontSize: 24, margin: 0, fontWeight: 800 }}>{totalHighTicket}</h4>
+                    </div>
+                  </div>
+                </div>
 
                 {leads.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '80px 20px', background: '#fff', borderRadius: 24, boxShadow: theme.shadow }}>
                     <div style={{ fontSize: 50, marginBottom: 20 }}>🚀</div>
-                    <h4 style={{ margin: '0 0 10px 0', fontSize: 20 }}>Tudo pronto para começar?</h4>
-                    <p style={{ color: theme.gray, maxWidth: 350, margin: '0 auto 25px' }}>Sua base de dados está vazia.</p>
-                    <button onClick={() => navigateTo('novoLead')} style={{ padding: '12px 24px', background: '#fef2e8', color: theme.primary, border: `1px solid ${theme.primary}`, borderRadius: 10, cursor: 'pointer', fontWeight: 600 }}>Cadastrar primeiro lead</button>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: 20 }}>Tudo pronto?</h4>
+                    <button onClick={() => navigateTo('novoLead')} style={{ padding: '12px 24px', background: '#fef2e8', color: theme.primary, border: `1px solid ${theme.primary}`, borderRadius: 10, fontWeight: 600 }}>Cadastrar lead</button>
                   </div>
                 ) : (
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 24 }}>
                     {leads.map(l => (
                       <div key={l.id} style={{ padding: 24, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, border: '1px solid rgba(0,0,0,0.01)', position: 'relative', overflow: 'hidden' }}>
                         {l.categoria === 'HIGH TICKET' && <div style={{ position: 'absolute', top: 0, right: 0, width: '4px', height: '100%', background: theme.primary }}></div>}
-                        
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
-                          <span style={{ fontSize: 10, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '5px 12px', borderRadius: 8, textTransform: 'uppercase', border: '1px solid rgba(0,0,0,0.03)' }}>{l.categoria}</span>
-                          
+                          <span style={{ fontSize: 10, fontWeight: 800, background: l.categoria === 'HIGH TICKET' ? '#fff7ed' : '#f8fafc', color: l.categoria === 'HIGH TICKET' ? theme.primary : theme.gray, padding: '5px 12px', borderRadius: 8, textTransform: 'uppercase' }}>{l.categoria}</span>
                           <div style={{ display: 'flex', gap: 4 }}>
-                            <button title="Editar" onClick={() => prepararEdicao(l)} className="btn-action">
-                              <IconEdit />
-                            </button>
-                            <button title="Excluir" onClick={() => removerLead(l.id)} className="btn-action btn-action-danger">
-                              <IconTrash />
-                            </button>
+                            <button onClick={() => prepararEdicao(l)} className="btn-action"><IconEdit /></button>
+                            <button onClick={() => removerLead(l.id)} className="btn-action btn-action-danger"><IconTrash /></button>
                           </div>
                         </div>
-
-                        <h4 style={{ margin: '18px 0 8px 0', fontSize: 19, letterSpacing: '-0.5px', fontWeight: 700 }}>{l.nome}</h4>
-                        
-                        {/* SEÇÃO DE INFOS ATUALIZADA COM ÍCONES VETORIAIS */}
-                        <div style={{ display: 'flex', gap: 16, alignItems: 'center', color: theme.gray, fontSize: 13, fontWeight: 500 }}>
-                           <span style={{ display: 'flex', alignItems: 'center' }}>
-                             <IconMapPin /> {l.cep}
-                           </span>
-                           <span style={{ display: 'flex', alignItems: 'center' }}>
-                             <IconCake /> {l.idade} anos
-                           </span>
+                        <h4 style={{ margin: '18px 0 8px 0', fontSize: 19, fontWeight: 700 }}>{l.nome}</h4>
+                        <div style={{ display: 'flex', gap: 16, color: theme.gray, fontSize: 13, fontWeight: 500 }}>
+                           <span style={{ display: 'flex', alignItems: 'center' }}><IconMapPin /> {l.cep}</span>
+                           <span style={{ display: 'flex', alignItems: 'center' }}><IconCake /> {l.idade} anos</span>
                         </div>
                       </div>
                     ))}
@@ -251,30 +197,26 @@ export default function App() {
             ) : (
               <div style={{ maxWidth: 480, margin: '0 auto' }}>
                 <div style={{ background: '#fff', padding: 40, borderRadius: 24, boxShadow: theme.shadow }}>
-                  <h3 style={{ marginTop: 0, fontSize: 24, fontWeight: 800, letterSpacing: '-0.5px' }}>{idEditando ? "Editar Cadastro" : "Novo Cadastro"}</h3>
-                  <p style={{ color: theme.gray, marginBottom: 30, fontSize: 14 }}>{idEditando ? "Atualize as informações do paciente Tavares Odontologia." : "Insira os dados do paciente para classificação automática."}</p>
-                  
+                  <h3 style={{ marginTop: 0, fontSize: 24, fontWeight: 800 }}>{idEditando ? "Editar Cadastro" : "Novo Cadastro"}</h3>
                   <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                      <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>Nome Completo</label>
-                      <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 14 }} />
+                      <label style={{ fontSize: 13, fontWeight: 700 }}>Nome Completo</label>
+                      <input required value={nomeLead} onChange={e=>setNomeLead(e.target.value)} placeholder="Ex: Maria Souza" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                     </div>
-                    
-                    <div style={{ display: 'flex', gap: 16, width: '100%' }}>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '70%' }}>
-                        <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>CEP</label>
-                        <input required value={cepLead} onChange={e=>setCepLead(e.target.value)} placeholder="40000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 14 }} />
+                    <div style={{ display: 'flex', gap: 16 }}>
+                      <div style={{ width: '70%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <label style={{ fontSize: 13, fontWeight: 700 }}>CEP</label>
+                        <input required value={cepLead} onChange={e=>setCepLead(e.target.value)} placeholder="40000-000" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: 8, width: '30%' }}>
-                        <label style={{ fontSize: 13, fontWeight: 700, color: theme.text }}>Idade</label>
-                        <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} placeholder="Ex: 30" style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc', fontSize: 14 }} />
+                      <div style={{ width: '30%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                        <label style={{ fontSize: 13, fontWeight: 700 }}>Idade</label>
+                        <input required type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ padding: '14px', borderRadius: 12, border: '1px solid #e2e8f0', background: '#f8fafc' }} />
                       </div>
                     </div>
-
-                    <button type="submit" disabled={isSaving} style={{ marginTop: 10, padding: '16px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: 16, boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.3)' }}>
+                    <button type="submit" disabled={isSaving} style={{ padding: '16px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, cursor: 'pointer', fontWeight: 700, boxShadow: '0 10px 15px -3px rgba(249, 115, 22, 0.3)' }}>
                       {isSaving ? "Processando..." : (idEditando ? "Atualizar Dados" : "Salvar Lead")}
                     </button>
-                    <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'transparent', border: 'none', color: theme.gray, cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>Cancelar e voltar</button>
+                    <button type="button" onClick={() => navigateTo('dashboard')} style={{ background: 'transparent', border: 'none', color: theme.gray, cursor: 'pointer', fontWeight: 600 }}>Cancelar</button>
                   </form>
                 </div>
               </div>
