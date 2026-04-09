@@ -126,7 +126,7 @@ export default function App() {
       }
       setView(newView);
       setAnimate(true);
-    }, 100);
+    }, 150);
   };
 
   const handleSalvarLead = async (e) => {
@@ -163,7 +163,7 @@ export default function App() {
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: theme.bg, fontFamily: '"Inter", sans-serif' }}>
       <style>{`
-        .fade-in { opacity: 0; transform: translateY(8px); transition: all 0.2s ease; } 
+        .fade-in { opacity: 0; transform: translateY(8px); transition: all 0.3s ease; } 
         .fade-in.active { opacity: 1; transform: translateY(0); }
         .btn-whatsapp:hover { transform: scale(1.1); filter: brightness(1.1); }
         .filter-chip { cursor: pointer; padding: 10px 18px; border-radius: 12px; background: #fff; border: 1.5px solid #e2e8f0; font-size: 11px; font-weight: 800; color: ${theme.gray}; transition: 0.2s; display: flex; align-items: center; gap: 8px; }
@@ -192,14 +192,22 @@ export default function App() {
       <main style={{ flex: 1, marginLeft: 260, padding: '40px 5%' }} className={`fade-in ${animate ? 'active' : ''}`}>
         {view === 'dashboard' ? (
           <div>
-            <div style={{ display: 'flex', gap: 15, marginBottom: 25 }}>
-              <div style={{ flex: 1, background: '#fff', padding: 20, borderRadius: 20, boxShadow: theme.shadow }}>
-                <span style={{ fontSize: 10, color: theme.gray, fontWeight: 800 }}>LEADS FILTRADOS</span>
-                <h4 style={{ fontSize: 24, margin: 0, fontWeight: 800 }}>{leadsFiltrados.length}</h4>
+            {/* FAROL DE MÉTRICAS REESTILIZADO */}
+            <div style={{ display: 'flex', gap: 20, marginBottom: 30 }}>
+              <div style={{ flex: 1, background: '#fff', padding: '24px', borderRadius: 24, boxShadow: theme.shadow, border: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: theme.primary }}></div>
+                  <span style={{ fontSize: 11, color: theme.gray, fontWeight: 600, letterSpacing: '0.5px' }}>LEADS FILTRADOS</span>
+                </div>
+                <h4 style={{ fontSize: 28, margin: 0, fontWeight: 500, color: theme.text }}>{leadsFiltrados.length}</h4>
               </div>
-              <div style={{ flex: 1.5, background: '#fff', padding: 20, borderRadius: 20, boxShadow: theme.shadow }}>
-                <span style={{ fontSize: 10, color: theme.gray, fontWeight: 800 }}>VALOR EM NEGOCIAÇÃO</span>
-                <h4 style={{ fontSize: 24, margin: 0, fontWeight: 800, color: theme.success }}>
+
+              <div style={{ flex: 1.5, background: '#fff', padding: '24px', borderRadius: 24, boxShadow: theme.shadow, border: '1px solid #f1f5f9' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ width: 6, height: 6, borderRadius: '50%', background: '#10b981' }}></div>
+                  <span style={{ fontSize: 11, color: theme.gray, fontWeight: 600, letterSpacing: '0.5px' }}>VALOR EM NEGOCIAÇÃO</span>
+                </div>
+                <h4 style={{ fontSize: 28, margin: 0, fontWeight: 400, color: '#059669', letterSpacing: '-0.5px' }}>
                   {leadsFiltrados.reduce((acc, curr) => acc + (Number(curr.valor?.replace(/\D/g, '') || 0) / 100), 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
                 </h4>
               </div>
@@ -234,8 +242,8 @@ export default function App() {
                     <span style={{ fontSize: 9, fontWeight: 900, color: getStatusColor(l.status), background: `${getStatusColor(l.status)}15`, padding: '4px 8px', borderRadius: 6 }}>{l.status}</span>
                     <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setTelLead(l.telefone || ''); setCepLead(l.cep); setIdadeLead(l.idade); setValorOrcamento(l.valor); setOrigemLead(l.origem); setStatusLead(l.status); setNotasLead(l.notas || ''); navigateTo('novoLead'); }} style={{ background: 'none', border: 'none', color: theme.primary, fontWeight: 800, cursor: 'pointer', fontSize: 11 }}>EDITAR</button>
                   </div>
-                  <h4 style={{ margin: 0, fontSize: 19 }}>{l.nome}</h4>
-                  <p style={{ margin: '5px 0 15px 0', fontWeight: 800, color: theme.success, fontSize: 17 }}>{l.valor}</p>
+                  <h4 style={{ margin: 0, fontSize: 19, fontWeight: 500 }}>{l.nome}</h4>
+                  <p style={{ margin: '5px 0 15px 0', fontWeight: 600, color: '#059669', fontSize: 17 }}>{l.valor}</p>
                   {l.notas && <div style={{ background: '#f8fafc', padding: '10px 12px', borderRadius: 10, fontSize: 12, color: theme.gray, marginBottom: 15, display: 'flex', gap: 6 }}><IconNote /> {l.notas}</div>}
                   <div style={{ display: 'flex', gap: 12, fontSize: 10, fontWeight: 700, color: theme.gray, borderTop: '1px solid #f1f5f9', paddingTop: 12 }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><IconOrigin type={l.origem} /> {l.origem}</div>
