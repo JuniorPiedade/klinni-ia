@@ -67,7 +67,7 @@ export default function App() {
   const [origemLead, setOrigemLead] = useState('Instagram');
   const [sexoLead, setSexoLead] = useState('Não Informado');
   const [valorOrcamento, setValorOrcamento] = useState('');
-  const [statusLead, setStatusLead] = useState('Aberto');
+  const [statusLead, setStatusLead] = useState('Pendente');
   const [obsLead, setObsLead] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -95,10 +95,10 @@ export default function App() {
 
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'Aberto': return { bg: '#e0f2fe', color: '#0369a1' }; // Azul
-      case 'Em Atendimento': return { bg: '#fef3c7', color: '#92400e' }; // Amarelo
-      case 'Fechado': return { bg: '#dcfce7', color: '#166534' }; // Verde
-      case 'Perdido': return { bg: '#f3f4f6', color: '#374151' }; // Cinza
+      case 'Agendado': return { bg: '#e0f2fe', color: '#0369a1' }; // Azul claro
+      case 'Em atendimento': return { bg: '#fef3c7', color: '#92400e' }; // Amarelo
+      case 'Não qualificado': return { bg: '#f3f4f6', color: '#6b7280' }; // Cinza
+      case 'Pendente': return { bg: '#ffedd5', color: '#9a3412' }; // Laranja/Tijolo
       default: return { bg: '#f3f4f6', color: '#374151' };
     }
   };
@@ -118,14 +118,13 @@ export default function App() {
     const emailFake = `${celular.replace(/\D/g, '')}@klinni.ia`;
     try {
       await signInWithEmailAndPassword(auth, emailFake, password);
-      mostrarMensagem("Bem-vindo!");
-    } catch (err) { alert("Acesso negado."); }
+    } catch (err) { alert("Erro ao entrar."); }
   };
 
   const handleExcluirLead = async (id, nome) => {
-    if (window.confirm(`Excluir perfil de ${nome}?`)) {
+    if (window.confirm(`Remover permanentemente ${nome}?`)) {
       await deleteDoc(doc(db, "leads", id));
-      mostrarMensagem("Excluído.");
+      mostrarMensagem("Lead removido.");
     }
   };
 
@@ -137,7 +136,7 @@ export default function App() {
     setOrigemLead(lead.origem);
     setSexoLead(lead.sexo || 'Não Informado');
     setValorOrcamento(lead.valorOrcamento || '');
-    setStatusLead(lead.status || 'Aberto');
+    setStatusLead(lead.status || 'Pendente');
     setObsLead(lead.observacoes || '');
     setView('novoLead');
   };
@@ -145,7 +144,7 @@ export default function App() {
   const resetForm = () => {
     setIdLeadEditando(null); setNomeLead(''); setCepLead(''); setNascimentoLead('');
     setOrigemLead('Instagram'); setSexoLead('Não Informado'); setValorOrcamento('');
-    setStatusLead('Aberto'); setObsLead('');
+    setStatusLead('Pendente'); setObsLead('');
   };
 
   const handleSalvarLead = async (e) => {
@@ -167,7 +166,7 @@ export default function App() {
         mostrarMensagem("Atualizado!");
       } else {
         await addDoc(collection(db, "leads"), { ...dados, createdAt: serverTimestamp() });
-        mostrarMensagem("Cadastrado!");
+        mostrarMensagem("Cadastrado com sucesso!");
       }
       resetForm();
       setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1000);
@@ -180,7 +179,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'sans-serif' }}>
       
       {aviso.visivel && (
-        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold', fontSize:'14px' }}>
+        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold', fontSize:'14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
           {aviso.texto}
         </div>
       )}
@@ -224,7 +223,9 @@ export default function App() {
                       <div style={{display:'flex', gap:'6px', marginBottom:'10px', alignItems:'center', flexWrap:'wrap'}}>
                           <span style={{fontSize:'8px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase'}}>{l.categoria}</span>
                           <span style={{fontSize:'8px', background: styleOrigem.bg, color: styleOrigem.color, padding:'2px 8px', borderRadius:'10px', fontWeight:'bold'}}>{l.origem}</span>
-                          <span style={{fontSize:'8px', background: styleStatus.bg, color: styleStatus.color, padding:'2px 8px', borderRadius:'10px', fontWeight:'bold', border:`1px solid ${styleStatus.color}20`}}>{l.status || 'Aberto'}</span>
+                          <span style={{fontSize:'8px', background: styleStatus.bg, color: styleStatus.color, padding:'2px 8px', borderRadius:'10px', fontWeight:'bold', border:`1px solid ${styleStatus.color}40`}}>
+                            {l.status || 'Pendente'}
+                          </span>
                       </div>
                       
                       <h4 style={{margin:'0 0 3px 0', fontSize:'18px', color:'#333', fontWeight:'700', maxWidth:'75%'}}>{l.nome}</h4>
@@ -299,19 +300,19 @@ export default function App() {
                     <div style={{flex:1}}>
                       <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Status Funil</label>
                       <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', width:'100%', background:'white', fontSize:'14px', fontWeight:'bold'}}>
-                        <option value="Aberto">Aberto</option>
-                        <option value="Em Atendimento">Em Atendimento</option>
-                        <option value="Fechado">Fechado</option>
-                        <option value="Perdido">Perdido</option>
+                        <option value="Agendado">Agendado</option>
+                        <option value="Em atendimento">Em atendimento</option>
+                        <option value="Não qualificado">Não qualificado</option>
+                        <option value="Pendente">Pendente</option>
                       </select>
                     </div>
                   </div>
 
                   <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Observações</label>
-                  <textarea placeholder="Notas sobre o cliente..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
+                  <textarea placeholder="Notas sobre o lead..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
 
                   <button type="submit" disabled={isSaving} style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'16px', cursor:'pointer', marginTop:'10px'}}>
-                    {isSaving ? 'Processando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR NO FUNIL'}
+                    {isSaving ? 'Gravando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR NO FUNIL'}
                   </button>
                 </form>
               </div>
