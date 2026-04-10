@@ -68,14 +68,14 @@ export default function App() {
     setTimeout(() => setAviso({ visivel: false, texto: '' }), 3500);
   };
 
-  // Função para definir cores das etiquetas de origem
+  // --- FUNÇÃO DE ESTILO "GLASS" PARA ORIGEM ---
   const getOrigemStyle = (origem) => {
     switch (origem) {
-      case 'Facebook': return { bg: '#e0f2fe', color: '#0369a1' };
-      case 'Google': return { bg: '#fce7f3', color: '#be185d' };
-      case 'Site': return { bg: '#fff7ed', color: '#c2410c' };
-      case 'Instagram': return { bg: '#f5f3ff', color: '#6d28d9' };
-      default: return { bg: '#f3f4f6', color: '#4b5563' };
+      case 'Facebook': return { bg: 'rgba(3, 105, 161, 0.08)', color: '#0369a1', border: 'rgba(3, 105, 161, 0.2)' };
+      case 'Google': return { bg: 'rgba(190, 24, 93, 0.08)', color: '#be185d', border: 'rgba(190, 24, 93, 0.2)' };
+      case 'Site': return { bg: 'rgba(194, 65, 12, 0.08)', color: '#c2410c', border: 'rgba(194, 65, 12, 0.2)' };
+      case 'Instagram': return { bg: 'rgba(109, 40, 217, 0.08)', color: '#6d28d9', border: 'rgba(109, 40, 217, 0.2)' };
+      default: return { bg: 'rgba(75, 85, 99, 0.08)', color: '#4b5563', border: 'rgba(75, 85, 99, 0.2)' };
     }
   };
 
@@ -111,7 +111,7 @@ export default function App() {
         origem: origemLead, categoria, status: "NOVO LEAD", 
         userId: user.uid, createdAt: serverTimestamp()
       });
-      mostrarMensagem(`Lead do ${origemLead} salvo com sucesso!`);
+      mostrarMensagem(`Lead salvo com sucesso!`);
       setNomeLead(''); setCepLead(''); setNascimentoLead('');
       setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1500);
     } catch (err) {
@@ -167,8 +167,18 @@ export default function App() {
                   return (
                     <div key={l.id} style={{background:'white', padding:'30px', borderRadius:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)', borderLeft: l.categoria === 'HIGH TICKET' ? '8px solid #ffb300' : '8px solid #ff6b00'}}>
                       <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
-                          <span style={{fontSize:'10px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase', letterSpacing: '0.5px'}}>{l.categoria}</span>
-                          <span style={{fontSize:'10px', background: styleOrigem.bg, color: styleOrigem.color, padding:'4px 10px', borderRadius:'12px', fontWeight:'800', textTransform: 'uppercase'}}>{l.origem}</span>
+                          <span style={{fontSize:'10px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase', letterSpacing: '1px'}}>{l.categoria}</span>
+                          <span style={{
+                            fontSize:'10px', 
+                            background: styleOrigem.bg, 
+                            color: styleOrigem.color, 
+                            border: `1px solid ${styleOrigem.border}`,
+                            padding:'3px 10px', 
+                            borderRadius:'12px', 
+                            fontWeight:'500', 
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.8px'
+                          }}>{l.origem}</span>
                       </div>
                       <h4 style={{margin:'15px 0 10px 0', fontSize:'22px', color:'#333', fontWeight:'700'}}>{l.nome}</h4>
                       
