@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
+import { getFirestore, collection, addDoc, updateDoc, doc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
 
 // --- ÍCONES SVG MINIMALISTAS ---
 const IconPin = () => (
@@ -17,6 +17,13 @@ const IconCake = () => (
     <line x1="16" y1="2" x2="16" y2="6"></line>
     <line x1="8" y1="2" x2="8" y2="6"></line>
     <line x1="3" y1="10" x2="21" y2="10"></line>
+  </svg>
+);
+
+const IconEdit = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path>
   </svg>
 );
 
@@ -44,6 +51,8 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [modoRegistro, setModoRegistro] = useState(false);
 
+  // States Formulário
+  const [idLeadEditando, setIdLeadEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
   const [nascimentoLead, setNascimentoLead] = useState('');
@@ -68,7 +77,6 @@ export default function App() {
     setTimeout(() => setAviso({ visivel: false, texto: '' }), 3500);
   };
 
-  // --- FUNÇÃO DE ESTILO "GLASS" PARA ORIGEM ---
   const getOrigemStyle = (origem) => {
     switch (origem) {
       case 'Facebook': return { bg: 'rgba(3, 105, 161, 0.08)', color: '#0369a1', border: 'rgba(3, 105, 161, 0.2)' };
@@ -96,6 +104,23 @@ export default function App() {
     }
   };
 
+  const iniciarEdicao = (lead) => {
+    setIdLeadEditando(lead.id);
+    setNomeLead(lead.nome);
+    setCepLead(lead.cep);
+    setNascimentoLead(lead.dataNascimento);
+    setOrigemLead(lead.origem);
+    setView('novoLead');
+  };
+
+  const resetForm = () => {
+    setIdLeadEditando(null);
+    setNomeLead('');
+    setCepLead('');
+    setNascimentoLead('');
+    setOrigemLead('Instagram');
+  };
+
   const handleSalvarLead = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -105,14 +130,21 @@ export default function App() {
     const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
     const categoria = (nobres.includes(cepLead.substring(0, 5)) && idade >= 20) ? "HIGH TICKET" : "Ticket Médio";
     
+    const dadosLead = {
+      nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
+      origem: origemLead, categoria, status: "ATUALIZADO", 
+      userId: user.uid, updatedAt: serverTimestamp()
+    };
+
     try {
-      await addDoc(collection(db, "leads"), {
-        nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
-        origem: origemLead, categoria, status: "NOVO LEAD", 
-        userId: user.uid, createdAt: serverTimestamp()
-      });
-      mostrarMensagem(`Lead salvo com sucesso!`);
-      setNomeLead(''); setCepLead(''); setNascimentoLead('');
+      if (idLeadEditando) {
+        await updateDoc(doc(db, "leads", idLeadEditando), dadosLead);
+        mostrarMensagem("Lead atualizado com sucesso!");
+      } else {
+        await addDoc(collection(db, "leads"), { ...dadosLead, createdAt: serverTimestamp(), status: "NOVO LEAD" });
+        mostrarMensagem("Novo lead cadastrado!");
+      }
+      resetForm();
       setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1500);
     } catch (err) {
       alert("Erro ao salvar.");
@@ -153,8 +185,8 @@ export default function App() {
           <nav style={{display:'flex', justifyContent:'space-between', padding:'20px 60px', background:'white', alignItems:'center', borderBottom:'2px solid #ff6b00', position:'sticky', top:0, zIndex:100}}>
             <h2 style={{margin:0, color:'#ff6b00', fontSize:'24px', fontWeight:'900'}}>KLINNI <span style={{fontWeight:'300', color:'#333'}}>IA</span></h2>
             <div style={{display:'flex', gap:'30px'}}>
-              <button onClick={()=>setView('dashboard')} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='dashboard'?'#ff6b00':'#333'}}>Dashboard</button>
-              <button onClick={()=>setView('novoLead')} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='novoLead'?'#ff6b00':'#333'}}>+ Novo Lead</button>
+              <button onClick={()=>{ setView('dashboard'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='dashboard'?'#ff6b00':'#333'}}>Dashboard</button>
+              <button onClick={()=>{ setView('novoLead'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='novoLead'?'#ff6b00':'#333'}}>+ Novo Lead</button>
               <button onClick={()=>signOut(auth)} style={{color:'#999', border:'none', background:'none', cursor:'pointer'}}>Sair</button>
             </div>
           </nav>
@@ -165,7 +197,16 @@ export default function App() {
                 {leads.map(l => {
                   const styleOrigem = getOrigemStyle(l.origem);
                   return (
-                    <div key={l.id} style={{background:'white', padding:'30px', borderRadius:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)', borderLeft: l.categoria === 'HIGH TICKET' ? '8px solid #ffb300' : '8px solid #ff6b00'}}>
+                    <div key={l.id} style={{background:'white', padding:'30px', borderRadius:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)', borderLeft: l.categoria === 'HIGH TICKET' ? '8px solid #ffb300' : '8px solid #ff6b00', position:'relative'}}>
+                      
+                      <button 
+                        onClick={() => iniciarEdicao(l)}
+                        style={{position:'absolute', right:'20px', bottom:'20px', background:'none', border:'none', color:'#ccc', cursor:'pointer'}}
+                        title="Editar Lead"
+                      >
+                        <IconEdit />
+                      </button>
+
                       <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                           <span style={{fontSize:'10px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase', letterSpacing: '1px'}}>{l.categoria}</span>
                           <span style={{
@@ -198,7 +239,13 @@ export default function App() {
               </div>
             ) : (
               <div style={{maxWidth:'480px', margin:'0 auto', background:'white', padding:'50px', borderRadius:'30px', boxShadow:'0 15px 35px rgba(0,0,0,0.08)'}}>
-                <h2 style={{marginBottom:'30px', color:'#333', textAlign:'center', fontWeight:'900'}}>Novo Cadastro</h2>
+                <h2 style={{marginBottom:'10px', color:'#333', textAlign:'center', fontWeight:'900'}}>
+                  {idLeadEditando ? 'Editar Perfil' : 'Novo Cadastro'}
+                </h2>
+                <p style={{textAlign:'center', color:'#999', marginBottom:'30px', fontSize:'14px'}}>
+                  {idLeadEditando ? 'Altere as informações abaixo' : 'Preencha os dados do novo lead'}
+                </p>
+                
                 <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'20px'}}>
                   <label style={{fontSize:'14px', fontWeight:'bold', color:'#555'}}>Nome do Lead</label>
                   <input placeholder="Ex: João Silva" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #f0f0f0'}} />
@@ -221,8 +268,11 @@ export default function App() {
                     <option value="Outros">Outros</option>
                   </select>
                   <button type="submit" disabled={isSaving} style={{padding:'18px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'18px', cursor:'pointer', marginTop:'10px'}}>
-                    {isSaving ? 'Salvando...' : 'FINALIZAR CADASTRO'}
+                    {isSaving ? 'Salvando...' : idLeadEditando ? 'ATUALIZAR PERFIL' : 'FINALIZAR CADASTRO'}
                   </button>
+                  {idLeadEditando && (
+                    <button type="button" onClick={()=>{ setView('dashboard'); resetForm(); }} style={{background:'none', border:'none', color:'#999', cursor:'pointer'}}>Cancelar</button>
+                  )}
                 </form>
               </div>
             )}
