@@ -59,6 +59,7 @@ export default function App() {
   const [celular, setCelular] = useState('');
   const [password, setPassword] = useState('');
 
+  // Estados do Formulário
   const [idLeadEditando, setIdLeadEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
@@ -66,6 +67,7 @@ export default function App() {
   const [origemLead, setOrigemLead] = useState('Instagram');
   const [sexoLead, setSexoLead] = useState('Não Informado');
   const [valorOrcamento, setValorOrcamento] = useState('');
+  const [statusLead, setStatusLead] = useState('Aberto');
   const [obsLead, setObsLead] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
@@ -91,6 +93,16 @@ export default function App() {
     return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
   };
 
+  const getStatusStyle = (status) => {
+    switch (status) {
+      case 'Aberto': return { bg: '#e0f2fe', color: '#0369a1' }; // Azul
+      case 'Em Atendimento': return { bg: '#fef3c7', color: '#92400e' }; // Amarelo
+      case 'Fechado': return { bg: '#dcfce7', color: '#166534' }; // Verde
+      case 'Perdido': return { bg: '#f3f4f6', color: '#374151' }; // Cinza
+      default: return { bg: '#f3f4f6', color: '#374151' };
+    }
+  };
+
   const getOrigemStyle = (origem) => {
     switch (origem) {
       case 'Facebook': return { bg: 'rgba(3, 105, 161, 0.08)', color: '#0369a1', border: 'rgba(3, 105, 161, 0.2)' };
@@ -103,24 +115,17 @@ export default function App() {
 
   const handleAutenticacao = async (e) => {
     e.preventDefault();
-    const numeroLimpo = celular.replace(/\D/g, '');
-    const emailFake = `${numeroLimpo}@klinni.ia`;
+    const emailFake = `${celular.replace(/\D/g, '')}@klinni.ia`;
     try {
       await signInWithEmailAndPassword(auth, emailFake, password);
-      mostrarMensagem("Acesso liberado!");
-    } catch (err) {
-      alert("Erro ao entrar.");
-    }
+      mostrarMensagem("Bem-vindo!");
+    } catch (err) { alert("Acesso negado."); }
   };
 
   const handleExcluirLead = async (id, nome) => {
-    if (window.confirm(`Tem certeza que deseja excluir o perfil de ${nome}?`)) {
-      try {
-        await deleteDoc(doc(db, "leads", id));
-        mostrarMensagem("Lead excluído!");
-      } catch (err) {
-        alert("Erro ao excluir.");
-      }
+    if (window.confirm(`Excluir perfil de ${nome}?`)) {
+      await deleteDoc(doc(db, "leads", id));
+      mostrarMensagem("Excluído.");
     }
   };
 
@@ -132,13 +137,15 @@ export default function App() {
     setOrigemLead(lead.origem);
     setSexoLead(lead.sexo || 'Não Informado');
     setValorOrcamento(lead.valorOrcamento || '');
+    setStatusLead(lead.status || 'Aberto');
     setObsLead(lead.observacoes || '');
     setView('novoLead');
   };
 
   const resetForm = () => {
     setIdLeadEditando(null); setNomeLead(''); setCepLead(''); setNascimentoLead('');
-    setOrigemLead('Instagram'); setSexoLead('Não Informado'); setValorOrcamento(''); setObsLead('');
+    setOrigemLead('Instagram'); setSexoLead('Não Informado'); setValorOrcamento('');
+    setStatusLead('Aberto'); setObsLead('');
   };
 
   const handleSalvarLead = async (e) => {
@@ -148,26 +155,23 @@ export default function App() {
     const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
     const categoria = (nobres.includes(cepLead.substring(0, 5)) && idade >= 20) ? "HIGH TICKET" : "Ticket Médio";
     
-    const dadosLead = {
+    const dados = {
       nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
       origem: origemLead, sexo: sexoLead, valorOrcamento: parseFloat(valorOrcamento) || 0, 
-      observacoes: obsLead, categoria, userId: user.uid, updatedAt: serverTimestamp()
+      status: statusLead, observacoes: obsLead, categoria, userId: user.uid, updatedAt: serverTimestamp()
     };
 
     try {
       if (idLeadEditando) {
-        await updateDoc(doc(db, "leads", idLeadEditando), dadosLead);
-        mostrarMensagem("Dados atualizados!");
+        await updateDoc(doc(db, "leads", idLeadEditando), dados);
+        mostrarMensagem("Atualizado!");
       } else {
-        await addDoc(collection(db, "leads"), { ...dadosLead, createdAt: serverTimestamp() });
-        mostrarMensagem("Lead cadastrado!");
+        await addDoc(collection(db, "leads"), { ...dados, createdAt: serverTimestamp() });
+        mostrarMensagem("Cadastrado!");
       }
       resetForm();
-      setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1200);
-    } catch (err) {
-      alert("Erro ao salvar.");
-      setIsSaving(false);
-    }
+      setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1000);
+    } catch (err) { setIsSaving(false); alert("Erro ao salvar."); }
   };
 
   if (loading) return <div style={{padding:'50px', textAlign:'center', color:'#ff6b00', fontWeight:'bold'}}>KLINNI IA...</div>;
@@ -176,7 +180,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'sans-serif' }}>
       
       {aviso.visivel && (
-        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold', fontSize:'14px', boxShadow: '0 8px 16px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold', fontSize:'14px' }}>
           {aviso.texto}
         </div>
       )}
@@ -208,24 +212,25 @@ export default function App() {
               <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(300px, 1fr))', gap:'20px'}}>
                 {leads.map(l => {
                   const styleOrigem = getOrigemStyle(l.origem);
+                  const styleStatus = getStatusStyle(l.status);
                   return (
                     <div key={l.id} style={{background:'white', padding:'22px', borderRadius:'18px', boxShadow:'0 3px 10px rgba(0,0,0,0.04)', borderLeft: l.categoria === 'HIGH TICKET' ? '6px solid #ffb300' : '6px solid #ff6b00', position:'relative', height: 'fit-content'}}>
                       
-                      {/* BOTÕES DE AÇÃO */}
                       <div style={{position:'absolute', right:'18px', top:'18px', display:'flex', gap:'10px'}}>
-                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer', transition:'color 0.2s'}} title="Editar" onMouseEnter={(e)=>e.target.style.color='#ff6b00'} onMouseLeave={(e)=>e.target.style.color='#ddd'}><IconEdit /></button>
-                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer', transition:'color 0.2s'}} title="Excluir" onMouseEnter={(e)=>e.target.style.color='#ef4444'} onMouseLeave={(e)=>e.target.style.color='#ddd'}><IconTrash /></button>
+                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconEdit /></button>
+                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconTrash /></button>
                       </div>
 
-                      <div style={{display:'flex', gap:'8px', marginBottom:'10px', alignItems:'center'}}>
-                          <span style={{fontSize:'9px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase'}}>{l.categoria}</span>
-                          <span style={{fontSize:'9px', background: styleOrigem.bg, color: styleOrigem.color, border: `1px solid ${styleOrigem.border}`, padding:'2px 8px', borderRadius:'10px', fontWeight:'500', textTransform: 'uppercase'}}>{l.origem}</span>
+                      <div style={{display:'flex', gap:'6px', marginBottom:'10px', alignItems:'center', flexWrap:'wrap'}}>
+                          <span style={{fontSize:'8px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase'}}>{l.categoria}</span>
+                          <span style={{fontSize:'8px', background: styleOrigem.bg, color: styleOrigem.color, padding:'2px 8px', borderRadius:'10px', fontWeight:'bold'}}>{l.origem}</span>
+                          <span style={{fontSize:'8px', background: styleStatus.bg, color: styleStatus.color, padding:'2px 8px', borderRadius:'10px', fontWeight:'bold', border:`1px solid ${styleStatus.color}20`}}>{l.status || 'Aberto'}</span>
                       </div>
                       
                       <h4 style={{margin:'0 0 3px 0', fontSize:'18px', color:'#333', fontWeight:'700', maxWidth:'75%'}}>{l.nome}</h4>
                       <p style={{fontSize:'10px', color:'#bbb', margin:'0 0 12px 0', textTransform:'uppercase', fontWeight:'bold'}}>{l.sexo}</p>
                       
-                      <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#777', marginBottom: (l.valorOrcamento > 0 || l.observacoes) ? '12px' : '0'}}>
+                      <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#777', marginBottom: '12px'}}>
                         <div style={{display:'flex', alignItems:'center'}}><IconPin /><span>{l.cep}</span></div>
                         <div style={{display:'flex', alignItems:'center'}}><IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span></div>
                       </div>
@@ -247,7 +252,7 @@ export default function App() {
               </div>
             ) : (
               <div style={{maxWidth:'500px', margin:'0 auto', background:'white', padding:'40px', borderRadius:'28px', boxShadow:'0 15px 35px rgba(0,0,0,0.06)'}}>
-                <h2 style={{marginBottom:'30px', color:'#333', textAlign:'center', fontWeight:'900', fontSize:'22px'}}>{idLeadEditando ? 'Editar Perfil' : 'Novo Cadastro'}</h2>
+                <h2 style={{marginBottom:'30px', color:'#333', textAlign:'center', fontWeight:'900', fontSize:'22px'}}>{idLeadEditando ? 'Editar Lead' : 'Novo Cadastro'}</h2>
                 
                 <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'15px'}}>
                   <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Nome do Lead</label>
@@ -280,20 +285,33 @@ export default function App() {
                     </div>
                   </div>
 
-                  <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Origem</label>
-                  <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', background:'white', fontSize:'14px'}}>
-                    <option value="Instagram">Instagram</option>
-                    <option value="Site">Site</option>
-                    <option value="Google">Google</option>
-                    <option value="Facebook">Facebook</option>
-                    <option value="Outros">Outros</option>
-                  </select>
+                  <div style={{display:'flex', gap:'15px'}}>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Origem</label>
+                      <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', width:'100%', background:'white', fontSize:'14px'}}>
+                        <option value="Instagram">Instagram</option>
+                        <option value="Site">Site</option>
+                        <option value="Google">Google</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="Outros">Outros</option>
+                      </select>
+                    </div>
+                    <div style={{flex:1}}>
+                      <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Status Funil</label>
+                      <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', width:'100%', background:'white', fontSize:'14px', fontWeight:'bold'}}>
+                        <option value="Aberto">Aberto</option>
+                        <option value="Em Atendimento">Em Atendimento</option>
+                        <option value="Fechado">Fechado</option>
+                        <option value="Perdido">Perdido</option>
+                      </select>
+                    </div>
+                  </div>
 
                   <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Observações</label>
                   <textarea placeholder="Notas sobre o cliente..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
 
                   <button type="submit" disabled={isSaving} style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'16px', cursor:'pointer', marginTop:'10px'}}>
-                    {isSaving ? 'Salvando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'FINALIZAR CADASTRO'}
+                    {isSaving ? 'Processando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR NO FUNIL'}
                   </button>
                 </form>
               </div>
