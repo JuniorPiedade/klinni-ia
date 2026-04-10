@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
-import { getFirestore, collection, addDoc, updateDoc, doc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
 
 // --- ÍCONES SVG ---
 const IconPin = () => (
@@ -24,6 +24,15 @@ const IconEdit = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
     <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path>
+  </svg>
+);
+
+const IconTrash = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="3 6 5 6 21 6"></polyline>
+    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+    <line x1="10" y1="11" x2="10" y2="17"></line>
+    <line x1="14" y1="11" x2="14" y2="17"></line>
   </svg>
 );
 
@@ -98,9 +107,20 @@ export default function App() {
     const emailFake = `${numeroLimpo}@klinni.ia`;
     try {
       await signInWithEmailAndPassword(auth, emailFake, password);
-      mostrarMensagem("Logado com sucesso!");
+      mostrarMensagem("Acesso liberado!");
     } catch (err) {
       alert("Erro ao entrar.");
+    }
+  };
+
+  const handleExcluirLead = async (id, nome) => {
+    if (window.confirm(`Tem certeza que deseja excluir o perfil de ${nome}?`)) {
+      try {
+        await deleteDoc(doc(db, "leads", id));
+        mostrarMensagem("Lead excluído!");
+      } catch (err) {
+        alert("Erro ao excluir.");
+      }
     }
   };
 
@@ -191,15 +211,19 @@ export default function App() {
                   return (
                     <div key={l.id} style={{background:'white', padding:'22px', borderRadius:'18px', boxShadow:'0 3px 10px rgba(0,0,0,0.04)', borderLeft: l.categoria === 'HIGH TICKET' ? '6px solid #ffb300' : '6px solid #ff6b00', position:'relative', height: 'fit-content'}}>
                       
-                      <button onClick={() => iniciarEdicao(l)} style={{position:'absolute', right:'18px', top:'18px', background:'none', border:'none', color:'#ddd', cursor:'pointer'}} title="Editar"><IconEdit /></button>
+                      {/* BOTÕES DE AÇÃO */}
+                      <div style={{position:'absolute', right:'18px', top:'18px', display:'flex', gap:'10px'}}>
+                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer', transition:'color 0.2s'}} title="Editar" onMouseEnter={(e)=>e.target.style.color='#ff6b00'} onMouseLeave={(e)=>e.target.style.color='#ddd'}><IconEdit /></button>
+                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer', transition:'color 0.2s'}} title="Excluir" onMouseEnter={(e)=>e.target.style.color='#ef4444'} onMouseLeave={(e)=>e.target.style.color='#ddd'}><IconTrash /></button>
+                      </div>
 
                       <div style={{display:'flex', gap:'8px', marginBottom:'10px', alignItems:'center'}}>
-                          <span style={{fontSize:'9px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase', letterSpacing:'0.5px'}}>{l.categoria}</span>
+                          <span style={{fontSize:'9px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase'}}>{l.categoria}</span>
                           <span style={{fontSize:'9px', background: styleOrigem.bg, color: styleOrigem.color, border: `1px solid ${styleOrigem.border}`, padding:'2px 8px', borderRadius:'10px', fontWeight:'500', textTransform: 'uppercase'}}>{l.origem}</span>
                       </div>
                       
-                      <h4 style={{margin:'0 0 3px 0', fontSize:'18px', color:'#333', fontWeight:'700', maxWidth:'88%'}}>{l.nome}</h4>
-                      <p style={{fontSize:'10px', color:'#bbb', margin:'0 0 12px 0', textTransform:'uppercase', fontWeight:'bold', letterSpacing:'0.3px'}}>{l.sexo}</p>
+                      <h4 style={{margin:'0 0 3px 0', fontSize:'18px', color:'#333', fontWeight:'700', maxWidth:'75%'}}>{l.nome}</h4>
+                      <p style={{fontSize:'10px', color:'#bbb', margin:'0 0 12px 0', textTransform:'uppercase', fontWeight:'bold'}}>{l.sexo}</p>
                       
                       <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#777', marginBottom: (l.valorOrcamento > 0 || l.observacoes) ? '12px' : '0'}}>
                         <div style={{display:'flex', alignItems:'center'}}><IconPin /><span>{l.cep}</span></div>
@@ -266,7 +290,7 @@ export default function App() {
                   </select>
 
                   <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Observações</label>
-                  <textarea placeholder="Detalhes extras sobre o cliente..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
+                  <textarea placeholder="Notas sobre o cliente..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
 
                   <button type="submit" disabled={isSaving} style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'16px', cursor:'pointer', marginTop:'10px'}}>
                     {isSaving ? 'Salvando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'FINALIZAR CADASTRO'}
