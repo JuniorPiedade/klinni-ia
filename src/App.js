@@ -59,7 +59,6 @@ export default function App() {
   const [celular, setCelular] = useState('');
   const [password, setPassword] = useState('');
 
-  // Estados do Formulário
   const [idLeadEditando, setIdLeadEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
@@ -93,38 +92,37 @@ export default function App() {
     return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
   };
 
+  // --- LÓGICA DE CORES RECALIBRADA ---
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'Agendado': return { bg: '#e0f2fe', color: '#0369a1' }; // Azul claro
-      case 'Em atendimento': return { bg: '#fef3c7', color: '#92400e' }; // Amarelo
-      case 'Não qualificado': return { bg: '#f3f4f6', color: '#6b7280' }; // Cinza
-      case 'Pendente': return { bg: '#ffedd5', color: '#9a3412' }; // Laranja/Tijolo
-      default: return { bg: '#f3f4f6', color: '#374151' };
+      case 'Agendado': return { bg: '#2563eb', color: '#fff' }; // Azul Royal
+      case 'Em atendimento': return { bg: '#eab308', color: '#000' }; // Amarelo Intenso
+      case 'Não qualificado': return { bg: '#4b5563', color: '#fff' }; // Cinza Chumbo
+      case 'Pendente': return { bg: '#f97316', color: '#fff' }; // Laranja Vibrante
+      default: return { bg: '#94a3b8', color: '#fff' };
     }
   };
 
   const getOrigemStyle = (origem) => {
     switch (origem) {
-      case 'Facebook': return { bg: 'rgba(3, 105, 161, 0.08)', color: '#0369a1', border: 'rgba(3, 105, 161, 0.2)' };
-      case 'Google': return { bg: 'rgba(190, 24, 93, 0.08)', color: '#be185d', border: 'rgba(190, 24, 93, 0.2)' };
-      case 'Site': return { bg: 'rgba(194, 65, 12, 0.08)', color: '#c2410c', border: 'rgba(194, 65, 12, 0.2)' };
-      case 'Instagram': return { bg: 'rgba(109, 40, 217, 0.08)', color: '#6d28d9', border: 'rgba(109, 40, 217, 0.2)' };
-      default: return { bg: 'rgba(75, 85, 99, 0.08)', color: '#4b5563', border: 'rgba(75, 85, 99, 0.2)' };
+      case 'Facebook': return { bg: '#0369a1', color: '#fff' };
+      case 'Google': return { bg: '#be185d', color: '#fff' };
+      case 'Site': return { bg: '#c2410c', color: '#fff' };
+      case 'Instagram': return { bg: '#6d28d9', color: '#fff' };
+      default: return { bg: '#4b5563', color: '#fff' };
     }
   };
 
   const handleAutenticacao = async (e) => {
     e.preventDefault();
     const emailFake = `${celular.replace(/\D/g, '')}@klinni.ia`;
-    try {
-      await signInWithEmailAndPassword(auth, emailFake, password);
-    } catch (err) { alert("Erro ao entrar."); }
+    try { await signInWithEmailAndPassword(auth, emailFake, password); } catch (err) { alert("Erro."); }
   };
 
   const handleExcluirLead = async (id, nome) => {
-    if (window.confirm(`Remover permanentemente ${nome}?`)) {
+    if (window.confirm(`Excluir permanentemente ${nome}?`)) {
       await deleteDoc(doc(db, "leads", id));
-      mostrarMensagem("Lead removido.");
+      mostrarMensagem("Excluído!");
     }
   };
 
@@ -166,11 +164,11 @@ export default function App() {
         mostrarMensagem("Atualizado!");
       } else {
         await addDoc(collection(db, "leads"), { ...dados, createdAt: serverTimestamp() });
-        mostrarMensagem("Cadastrado com sucesso!");
+        mostrarMensagem("Salvo!");
       }
       resetForm();
       setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1000);
-    } catch (err) { setIsSaving(false); alert("Erro ao salvar."); }
+    } catch (err) { setIsSaving(false); }
   };
 
   if (loading) return <div style={{padding:'50px', textAlign:'center', color:'#ff6b00', fontWeight:'bold'}}>KLINNI IA...</div>;
@@ -179,7 +177,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'sans-serif' }}>
       
       {aviso.visivel && (
-        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold', fontSize:'14px', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}>
+        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold' }}>
           {aviso.texto}
         </div>
       )}
@@ -200,8 +198,8 @@ export default function App() {
           <nav style={{display:'flex', justifyContent:'space-between', padding:'15px 40px', background:'white', alignItems:'center', borderBottom:'2px solid #ff6b00', position:'sticky', top:0, zIndex:100}}>
             <h2 style={{margin:0, color:'#ff6b00', fontSize:'22px', fontWeight:'900'}}>KLINNI <span style={{fontWeight:'300', color:'#333'}}>IA</span></h2>
             <div style={{display:'flex', gap:'25px'}}>
-              <button onClick={()=>{ setView('dashboard'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='dashboard'?'#ff6b00':'#333', fontSize:'15px'}}>Dashboard</button>
-              <button onClick={()=>{ setView('novoLead'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='novoLead'?'#ff6b00':'#333', fontSize:'15px'}}>+ Novo Lead</button>
+              <button onClick={()=>{ setView('dashboard'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='dashboard'?'#ff6b00':'#333'}}>Dashboard</button>
+              <button onClick={()=>{ setView('novoLead'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: 'bold', color: view==='novoLead'?'#ff6b00':'#333'}}>+ Novo Lead</button>
               <button onClick={()=>signOut(auth)} style={{color:'#999', border:'none', background:'none', cursor:'pointer', fontSize:'13px'}}>Sair</button>
             </div>
           </nav>
@@ -213,37 +211,36 @@ export default function App() {
                   const styleOrigem = getOrigemStyle(l.origem);
                   const styleStatus = getStatusStyle(l.status);
                   return (
-                    <div key={l.id} style={{background:'white', padding:'22px', borderRadius:'18px', boxShadow:'0 3px 10px rgba(0,0,0,0.04)', borderLeft: l.categoria === 'HIGH TICKET' ? '6px solid #ffb300' : '6px solid #ff6b00', position:'relative', height: 'fit-content'}}>
+                    <div key={l.id} style={{background:'white', padding:'22px', borderRadius:'18px', borderLeft: l.categoria === 'HIGH TICKET' ? '6px solid #ffb300' : '6px solid #ff6b00', position:'relative', boxShadow:'0 4px 15px rgba(0,0,0,0.05)'}}>
                       
                       <div style={{position:'absolute', right:'18px', top:'18px', display:'flex', gap:'10px'}}>
-                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconEdit /></button>
-                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconTrash /></button>
+                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ccc', cursor:'pointer'}}><IconEdit /></button>
+                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ccc', cursor:'pointer'}}><IconTrash /></button>
                       </div>
 
-                      <div style={{display:'flex', gap:'6px', marginBottom:'10px', alignItems:'center', flexWrap:'wrap'}}>
-                          <span style={{fontSize:'8px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase'}}>{l.categoria}</span>
-                          <span style={{fontSize:'8px', background: styleOrigem.bg, color: styleOrigem.color, padding:'2px 8px', borderRadius:'10px', fontWeight:'bold'}}>{l.origem}</span>
-                          <span style={{fontSize:'8px', background: styleStatus.bg, color: styleStatus.color, padding:'2px 8px', borderRadius:'10px', fontWeight:'bold', border:`1px solid ${styleStatus.color}40`}}>
+                      <div style={{display:'flex', gap:'6px', marginBottom:'12px', alignItems:'center', flexWrap:'wrap'}}>
+                          <span style={{fontSize:'8px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', border:`1px solid ${l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00'}`, padding:'2px 6px', borderRadius:'4px', textTransform:'uppercase'}}>{l.categoria}</span>
+                          <span style={{fontSize:'9px', background: styleStatus.bg, color: styleStatus.color, padding:'3px 10px', borderRadius:'6px', fontWeight:'900', textTransform: 'uppercase', letterSpacing:'0.5px'}}>
                             {l.status || 'Pendente'}
                           </span>
                       </div>
                       
-                      <h4 style={{margin:'0 0 3px 0', fontSize:'18px', color:'#333', fontWeight:'700', maxWidth:'75%'}}>{l.nome}</h4>
-                      <p style={{fontSize:'10px', color:'#bbb', margin:'0 0 12px 0', textTransform:'uppercase', fontWeight:'bold'}}>{l.sexo}</p>
+                      <h4 style={{margin:'0 0 4px 0', fontSize:'18px', color:'#111', fontWeight:'800', maxWidth:'75%'}}>{l.nome}</h4>
                       
-                      <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#777', marginBottom: '12px'}}>
+                      <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#666', marginBottom: '12px'}}>
                         <div style={{display:'flex', alignItems:'center'}}><IconPin /><span>{l.cep}</span></div>
                         <div style={{display:'flex', alignItems:'center'}}><IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span></div>
                       </div>
 
-                      {l.valorOrcamento > 0 && (
-                        <div style={{fontSize:'15px', color:'#22c55e', fontWeight:'700', marginBottom: l.observacoes ? '12px' : '0'}}>
-                           R$ {formatarMoeda(l.valorOrcamento)}
-                        </div>
-                      )}
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                        {l.valorOrcamento > 0 ? (
+                          <span style={{fontSize:'16px', color:'#16a34a', fontWeight:'800'}}>R$ {formatarMoeda(l.valorOrcamento)}</span>
+                        ) : <span></span>}
+                        <span style={{fontSize:'8px', background: styleOrigem.bg, color: styleOrigem.color, padding:'2px 6px', borderRadius:'4px', fontWeight:'bold'}}>{l.origem}</span>
+                      </div>
 
                       {l.observacoes && (
-                        <div style={{background:'#fcfcfc', padding:'10px 12px', borderRadius:'10px', fontSize:'11px', color:'#666', border:'1px solid #f2f2f2', fontStyle:'italic', lineHeight:'1.4'}}>
+                        <div style={{marginTop:'12px', background:'#f9fafb', padding:'8px 12px', borderRadius:'8px', fontSize:'11px', color:'#4b5563', borderLeft:'3px solid #ddd', fontStyle:'italic'}}>
                           {l.observacoes}
                         </div>
                       )}
@@ -309,7 +306,7 @@ export default function App() {
                   </div>
 
                   <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Observações</label>
-                  <textarea placeholder="Notas sobre o lead..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
+                  <textarea placeholder="Notas..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
 
                   <button type="submit" disabled={isSaving} style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'16px', cursor:'pointer', marginTop:'10px'}}>
                     {isSaving ? 'Gravando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR NO FUNIL'}
