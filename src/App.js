@@ -68,6 +68,17 @@ export default function App() {
     setTimeout(() => setAviso({ visivel: false, texto: '' }), 3500);
   };
 
+  // Função para definir cores das etiquetas de origem
+  const getOrigemStyle = (origem) => {
+    switch (origem) {
+      case 'Facebook': return { bg: '#e0f2fe', color: '#0369a1' };
+      case 'Google': return { bg: '#fce7f3', color: '#be185d' };
+      case 'Site': return { bg: '#fff7ed', color: '#c2410c' };
+      case 'Instagram': return { bg: '#f5f3ff', color: '#6d28d9' };
+      default: return { bg: '#f3f4f6', color: '#4b5563' };
+    }
+  };
+
   const handleAutenticacao = async (e) => {
     e.preventDefault();
     const numeroLimpo = celular.replace(/\D/g, '');
@@ -88,27 +99,19 @@ export default function App() {
   const handleSalvarLead = async (e) => {
     e.preventDefault();
     setIsSaving(true);
-
     const anoNasc = new Date(nascimentoLead).getFullYear();
     const anoAtual = new Date().getFullYear();
     const idade = anoAtual - anoNasc;
-
     const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
     const categoria = (nobres.includes(cepLead.substring(0, 5)) && idade >= 20) ? "HIGH TICKET" : "Ticket Médio";
     
     try {
       await addDoc(collection(db, "leads"), {
-        nome: nomeLead, 
-        cep: cepLead, 
-        dataNascimento: nascimentoLead,
-        origem: origemLead,
-        categoria,
-        status: "NOVO LEAD", 
-        userId: user.uid, 
-        createdAt: serverTimestamp()
+        nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
+        origem: origemLead, categoria, status: "NOVO LEAD", 
+        userId: user.uid, createdAt: serverTimestamp()
       });
-
-      mostrarMensagem(`Sucesso! Lead vindo do ${origemLead} salvo.`);
+      mostrarMensagem(`Lead do ${origemLead} salvo com sucesso!`);
       setNomeLead(''); setCepLead(''); setNascimentoLead('');
       setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1500);
     } catch (err) {
@@ -159,26 +162,29 @@ export default function App() {
           <main style={{padding:'40px 60px'}}>
             {view === 'dashboard' ? (
               <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:'25px'}}>
-                {leads.map(l => (
-                  <div key={l.id} style={{background:'white', padding:'30px', borderRadius:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)', borderLeft: l.categoria === 'HIGH TICKET' ? '8px solid #ffb300' : '8px solid #ff6b00'}}>
-                    <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
-                        <span style={{fontSize:'10px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase', letterSpacing: '0.5px'}}>{l.categoria}</span>
-                        <span style={{fontSize:'10px', background:'#f0f0f0', padding:'4px 10px', borderRadius:'12px', color:'#666', fontWeight:'700'}}>{l.origem}</span>
-                    </div>
-                    <h4 style={{margin:'15px 0 10px 0', fontSize:'22px', color:'#333', fontWeight:'700'}}>{l.nome}</h4>
-                    
-                    <div style={{display:'flex', alignItems:'center', fontSize:'13px', color:'#666'}}>
-                      <div style={{display:'flex', alignItems:'center', color: '#ff6b00'}}>
-                        <IconPin />
-                        <span style={{color: '#444'}}>{l.cep}</span>
+                {leads.map(l => {
+                  const styleOrigem = getOrigemStyle(l.origem);
+                  return (
+                    <div key={l.id} style={{background:'white', padding:'30px', borderRadius:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)', borderLeft: l.categoria === 'HIGH TICKET' ? '8px solid #ffb300' : '8px solid #ff6b00'}}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
+                          <span style={{fontSize:'10px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase', letterSpacing: '0.5px'}}>{l.categoria}</span>
+                          <span style={{fontSize:'10px', background: styleOrigem.bg, color: styleOrigem.color, padding:'4px 10px', borderRadius:'12px', fontWeight:'800', textTransform: 'uppercase'}}>{l.origem}</span>
                       </div>
-                      <div style={{display:'flex', alignItems:'center', marginLeft: '8px'}}>
-                        <IconCake />
-                        <span style={{color: '#444'}}>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span>
+                      <h4 style={{margin:'15px 0 10px 0', fontSize:'22px', color:'#333', fontWeight:'700'}}>{l.nome}</h4>
+                      
+                      <div style={{display:'flex', alignItems:'center', fontSize:'13px', color:'#666'}}>
+                        <div style={{display:'flex', alignItems:'center', color: '#ff6b00'}}>
+                          <IconPin />
+                          <span style={{color: '#444'}}>{l.cep}</span>
+                        </div>
+                        <div style={{display:'flex', alignItems:'center', marginLeft: '8px'}}>
+                          <IconCake />
+                          <span style={{color: '#444'}}>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div style={{maxWidth:'480px', margin:'0 auto', background:'white', padding:'50px', borderRadius:'30px', boxShadow:'0 15px 35px rgba(0,0,0,0.08)'}}>
@@ -186,18 +192,16 @@ export default function App() {
                 <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'20px'}}>
                   <label style={{fontSize:'14px', fontWeight:'bold', color:'#555'}}>Nome do Lead</label>
                   <input placeholder="Ex: João Silva" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #f0f0f0'}} />
-                  
                   <div style={{display:'flex', gap:'15px'}}>
                     <div style={{flex:1}}>
                         <label style={{fontSize:'14px', fontWeight:'bold', color:'#555'}}>CEP</label>
-                        <input placeholder="40000-000" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #f0f0f0', width:'100%', boxSizing:'border-box'}} />
+                        <input placeholder="40000-000" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #f0f0f0', width:'100%'}} />
                     </div>
                     <div style={{flex:1}}>
                         <label style={{fontSize:'14px', fontWeight:'bold', color:'#555'}}>Nascimento</label>
-                        <input type="date" value={nascimentoLead} onChange={e=>setNascimentoLead(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #f0f0f0', width:'100%', boxSizing:'border-box'}} />
+                        <input type="date" value={nascimentoLead} onChange={e=>setNascimentoLead(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #f0f0f0', width:'100%'}} />
                     </div>
                   </div>
-
                   <label style={{fontSize:'14px', fontWeight:'bold', color:'#555'}}>Origem do Lead</label>
                   <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{padding:'15px', borderRadius:'12px', border:'2px solid #f0f0f0', background:'white'}}>
                     <option value="Instagram">Instagram</option>
@@ -206,7 +210,6 @@ export default function App() {
                     <option value="Facebook">Facebook</option>
                     <option value="Outros">Outros</option>
                   </select>
-
                   <button type="submit" disabled={isSaving} style={{padding:'18px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'18px', cursor:'pointer', marginTop:'10px'}}>
                     {isSaving ? 'Salvando...' : 'FINALIZAR CADASTRO'}
                   </button>
