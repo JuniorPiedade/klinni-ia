@@ -3,7 +3,7 @@ import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
 
-// --- ÍCONES PREMIUM ---
+// --- ÍCONES PREMIUM COM LOGICA DE HOVER ---
 const IconWallet = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '12px', opacity: 0.6 }}>
     <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
@@ -30,26 +30,37 @@ const IconCake = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px', marginLeft: '12px' }}>
     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
     <line x1="16" y1="2" x2="16" y2="6"></line>
-    <line x1="8" y1="2" x2="8" y2="6"></line>
+    <line x1="8" y1="2" x2="8" ry="2"></line>
     <line x1="3" y1="10" x2="21" y2="10"></line>
   </svg>
 );
 
-const IconEdit = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
-    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path>
-  </svg>
-);
+// --- COMPONENTES DE AÇÃO REATIVOS ---
+const ActionButton = ({ onClick, children, hoverColor }) => {
+  const [isHovered, setIsHovered] = useState(false);
+  return (
+    <button 
+      onClick={onClick}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
+      style={{
+        background: 'none',
+        border: 'none',
+        color: isHovered ? hoverColor : '#ddd',
+        cursor: 'pointer',
+        transition: 'all 0.2s ease-in-out',
+        padding: '4px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}
+    >
+      {children}
+    </button>
+  );
+};
 
-const IconTrash = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="3 6 5 6 21 6"></polyline>
-    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
-  </svg>
-);
-
-// --- CONFIGURAÇÃO ---
+// --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
   apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
   authDomain: "klinni-ia.firebaseapp.com",
@@ -96,55 +107,31 @@ export default function App() {
     return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
-  // --- LÓGICA DO FAROL (TOTAIS) ---
-  const totalPendente = leads
-    .filter(l => l.status === 'Pendente')
-    .reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
+  // Cálculos do Farol
+  const totalPendente = leads.filter(l => l.status === 'Pendente').reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
+  const totalAtendimento = leads.filter(l => l.status === 'Em atendimento').reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
 
-  const totalAtendimento = leads
-    .filter(l => l.status === 'Em atendimento')
-    .reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
+  const formatarMoeda = (valor) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
 
-  const mostrarMensagem = (txt) => {
-    setAviso({ visivel: true, texto: txt });
-    setTimeout(() => setAviso({ visivel: false, texto: '' }), 3000);
-  };
-
-  const formatarMoeda = (valor) => {
-    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
-  };
-
-  const getStatusStyle = (status) => {
-    switch (status) {
-      case 'Agendado': return { bg: '#eff6ff', color: '#1d4ed8' };
-      case 'Em atendimento': return { bg: '#fffbeb', color: '#b45309' };
-      case 'Não qualificado': return { bg: '#f9fafb', color: '#6b7280' };
-      case 'Pendente': return { bg: '#fff7ed', color: '#c2410c' };
-      default: return { bg: '#f8fafc', color: '#475569' };
-    }
-  };
-
-  const getOrigemStyle = (origem) => {
-    switch (origem) {
-      case 'Facebook': return { bg: '#f0f9ff', color: '#0369a1' };
-      case 'Google': return { bg: '#fdf2f8', color: '#be185d' };
-      case 'Site': return { bg: '#fff7ed', color: '#c2410c' };
-      case 'Instagram': return { bg: '#f5f3ff', color: '#6d28d9' };
-      default: return { bg: '#f8fafc', color: '#4b5563' };
-    }
-  };
-
-  const handleAutenticacao = async (e) => {
+  const handleSalvarLead = async (e) => {
     e.preventDefault();
-    const emailFake = `${celular.replace(/\D/g, '')}@klinni.ia`;
-    try { await signInWithEmailAndPassword(auth, emailFake, password); } catch (err) { alert("Acesso não autorizado."); }
-  };
+    setIsSaving(true);
+    const idade = new Date().getFullYear() - new Date(nascimentoLead).getFullYear();
+    const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
+    const categoria = (nobres.includes(cepLead.substring(0, 5)) && idade >= 20) ? "HIGH TICKET" : "Ticket Médio";
+    
+    const dados = {
+      nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
+      origem: origemLead, sexo: sexoLead, valorOrcamento: parseFloat(valorOrcamento) || 0, 
+      status: statusLead, observacoes: obsLead, categoria, userId: user.uid, updatedAt: serverTimestamp()
+    };
 
-  const handleExcluirLead = async (id, nome) => {
-    if (window.confirm(`Deseja remover o registro de ${nome}?`)) {
-      await deleteDoc(doc(db, "leads", id));
-      mostrarMensagem("Registro removido.");
-    }
+    try {
+      if (idLeadEditando) { await updateDoc(doc(db, "leads", idLeadEditando), dados); }
+      else { await addDoc(collection(db, "leads"), { ...dados, createdAt: serverTimestamp() }); }
+      resetForm();
+      setView('dashboard');
+    } finally { setIsSaving(false); }
   };
 
   const iniciarEdicao = (lead) => {
@@ -161,172 +148,114 @@ export default function App() {
     setStatusLead('Pendente'); setObsLead('');
   };
 
-  const handleSalvarLead = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    const idade = new Date().getFullYear() - new Date(nascimentoLead).getFullYear();
-    const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
-    const categoria = (nobres.includes(cepLead.substring(0, 5)) && idade >= 20) ? "HIGH TICKET" : "Ticket Médio";
-    
-    const dados = {
-      nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
-      origem: origemLead, sexo: sexoLead, valorOrcamento: parseFloat(valorOrcamento) || 0, 
-      status: statusLead, observacoes: obsLead, categoria, userId: user.uid, updatedAt: serverTimestamp()
-    };
-
-    try {
-      if (idLeadEditando) {
-        await updateDoc(doc(db, "leads", idLeadEditando), dados);
-        mostrarMensagem("Dados refinados.");
-      } else {
-        await addDoc(collection(db, "leads"), { ...dados, createdAt: serverTimestamp() });
-        mostrarMensagem("Lead imortalizado.");
-      }
-      resetForm();
-      setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 800);
-    } catch (err) { setIsSaving(false); }
-  };
-
-  if (loading) return <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', color: '#ff6b00', letterSpacing: '2px', fontWeight: '300'}}>CARREGANDO KLINNI IA...</div>;
+  if (loading) return <div style={{height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#fff', color: '#ff6b00', fontWeight: '300'}}>KLINNI IA...</div>;
 
   return (
-    <div style={{ minHeight: '100vh', background: '#fafafa', fontFamily: '"Inter", sans-serif', color: '#333' }}>
+    <div style={{ minHeight: '100vh', background: '#fafafa', fontFamily: '"Inter", sans-serif' }}>
       
-      {aviso.visivel && (
-        <div style={{ position: 'fixed', bottom: '30px', right: '30px', zIndex: 99999, background: '#1a1a1a', color: 'white', padding: '16px 32px', borderRadius: '16px', fontWeight: '500', fontSize: '14px', boxShadow: '0 10px 30px rgba(0,0,0,0.15)' }}>
-          {aviso.texto}
-        </div>
-      )}
-
       {!user ? (
         <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff'}}>
-          <div style={{width:'350px', padding:'50px', textAlign:'center', border:'1px solid #f2f2f2', borderRadius:'32px', boxShadow: '0 20px 40px rgba(0,0,0,0.03)'}}>
-            <h1 style={{fontSize:'28px', color:'#111', marginBottom:'35px', fontWeight:'800', letterSpacing:'-1px'}}>KLINNI <span style={{color:'#ff6b00'}}>IA</span></h1>
-            <form onSubmit={handleAutenticacao} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
-              <input placeholder="Acesso" value={celular} onChange={e=>setCelular(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', background: '#fcfcfc', outline: 'none'}} />
-              <input type="password" placeholder="Chave" value={password} onChange={e=>setPassword(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', background: '#fcfcfc', outline: 'none'}} />
-              <button style={{padding:'18px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'14px', fontWeight:'600', cursor:'pointer', marginTop: '10px'}}>ACESSAR DASHBOARD</button>
+          <div style={{width:'350px', padding:'50px', textAlign:'center', border:'1px solid #f2f2f2', borderRadius:'32px'}}>
+            <h1 style={{fontSize:'28px', color:'#111', marginBottom:'35px', fontWeight:'800'}}>KLINNI <span style={{color:'#ff6b00'}}>IA</span></h1>
+            <form onSubmit={async (e) => { e.preventDefault(); const email = `${celular.replace(/\D/g, '')}@klinni.ia`; try { await signInWithEmailAndPassword(auth, email, password); } catch(err){alert("Erro");} }} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
+              <input placeholder="Celular" value={celular} onChange={e=>setCelular(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee'}} />
+              <input type="password" placeholder="Chave" value={password} onChange={e=>setPassword(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee'}} />
+              <button style={{padding:'18px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'14px', fontWeight:'600'}}>ENTRAR</button>
             </form>
           </div>
         </div>
       ) : (
         <>
-          <nav style={{display:'flex', justifyContent:'space-between', padding:'20px 60px', background:'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', alignItems:'center', borderBottom:'1px solid #f0f0f0', position:'sticky', top:0, zIndex:100}}>
-            <h2 style={{margin:0, color:'#111', fontSize:'20px', fontWeight:'900', letterSpacing:'-0.5px'}}>KLINNI <span style={{color:'#ff6b00'}}>IA</span></h2>
+          <nav style={{display:'flex', justifyContent:'space-between', padding:'20px 60px', background:'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderBottom:'1px solid #f0f0f0', position:'sticky', top:0, zIndex:100}}>
+            <h2 style={{margin:0, color:'#111', fontSize:'20px', fontWeight:'900'}}>KLINNI <span style={{color:'#ff6b00'}}>IA</span></h2>
             <div style={{display:'flex', gap:'35px', alignItems: 'center'}}>
-              <button onClick={()=>{ setView('dashboard'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: '600', color: view==='dashboard'?'#ff6b00':'#888', transition: '0.3s'}}>DASHBOARD</button>
-              <button onClick={()=>{ setView('novoLead'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: '600', color: view==='novoLead'?'#ff6b00':'#888', transition: '0.3s'}}>+ NOVO LEAD</button>
-              <button onClick={()=>signOut(auth)} style={{color:'#ccc', border:'1px solid #eee', background:'white', cursor:'pointer', fontSize:'11px', padding: '8px 16px', borderRadius: '10px', fontWeight: 'bold'}}>SAIR</button>
+              <button onClick={()=>{ setView('dashboard'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: '600', color: view==='dashboard'?'#ff6b00':'#888'}}>DASHBOARD</button>
+              <button onClick={()=>{ setView('novoLead'); resetForm(); }} style={{background:'none', border:'none', cursor:'pointer', fontWeight: '600', color: view==='novoLead'?'#ff6b00':'#888'}}>+ NOVO LEAD</button>
+              <button onClick={()=>signOut(auth)} style={{color:'#ccc', border:'1px solid #eee', background:'white', padding: '8px 16px', borderRadius: '10px', fontSize:'11px'}}>SAIR</button>
             </div>
           </nav>
 
           <main style={{padding:'40px 60px'}}>
             {view === 'dashboard' && (
               <>
-                {/* --- FAROL ESTRATÉGICO --- */}
                 <div style={{display: 'flex', gap: '20px', marginBottom: '40px'}}>
-                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.02)'}}>
-                    <div style={{width: '48px', height: '48px', background: '#fff7ed', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c2410c'}}>
-                      <IconWallet />
-                    </div>
+                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center'}}>
+                    <div style={{width: '48px', height: '48px', background: '#fff7ed', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c2410c'}}><IconWallet /></div>
                     <div style={{marginLeft: '20px'}}>
-                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Volume Pendente</div>
-                      <div style={{fontSize: '22px', color: '#1a1a1a', fontWeight: '800', marginTop: '4px'}}>R$ {formatarMoeda(totalPendente)}</div>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: '800', textTransform: 'uppercase'}}>Pendente</div>
+                      <div style={{fontSize: '22px', color: '#1a1a1a', fontWeight: '800'}}>R$ {formatarMoeda(totalPendente)}</div>
                     </div>
                   </div>
-
-                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.02)'}}>
-                    <div style={{width: '48px', height: '48px', background: '#fffbeb', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b45309'}}>
-                      <IconTrend />
-                    </div>
+                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center'}}>
+                    <div style={{width: '48px', height: '48px', background: '#fffbeb', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b45309'}}><IconTrend /></div>
                     <div style={{marginLeft: '20px'}}>
-                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Em Atendimento</div>
-                      <div style={{fontSize: '22px', color: '#1a1a1a', fontWeight: '800', marginTop: '4px'}}>R$ {formatarMoeda(totalAtendimento)}</div>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: '800', textTransform: 'uppercase'}}>Em Atendimento</div>
+                      <div style={{fontSize: '22px', color: '#1a1a1a', fontWeight: '800'}}>R$ {formatarMoeda(totalAtendimento)}</div>
                     </div>
                   </div>
                 </div>
 
-                {/* --- GRID DE LEADS --- */}
                 <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:'25px'}}>
-                  {leads.map(l => {
-                    const styleOrigem = getOrigemStyle(l.origem);
-                    const styleStatus = getStatusStyle(l.status);
-                    return (
-                      <div key={l.id} style={{background:'#ffffff', padding:'32px', borderRadius:'24px', position:'relative', boxShadow:'0 4px 20px rgba(0,0,0,0.02)', border:'1px solid #f5f5f5', transition: '0.3s'}} onMouseEnter={(e)=>e.currentTarget.style.transform='translateY(-5px)'} onMouseLeave={(e)=>e.currentTarget.style.transform='translateY(0)'}>
-                        <div style={{position:'absolute', right:'24px', top:'24px', display:'flex', gap:'12px'}}>
-                          <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconEdit /></button>
-                          <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconTrash /></button>
-                        </div>
-
-                        <div style={{display:'flex', gap:'8px', marginBottom:'20px', alignItems:'center'}}>
-                            <span style={{fontSize:'9px', fontWeight:'700', color: l.categoria === 'HIGH TICKET' ? '#b45309' : '#64748b', letterSpacing: '0.5px'}}>{l.categoria}</span>
-                            <div style={{width: '4px', height: '4px', background: '#ddd', borderRadius: '50%'}}></div>
-                            <span style={{fontSize:'9px', fontWeight:'700', color: '#999'}}>{l.createdAt ? new Date(l.createdAt.toDate()).toLocaleDateString('pt-BR') : '--'}</span>
-                        </div>
-                        
-                        <h4 style={{margin:'0 0 8px 0', fontSize:'20px', color:'#1a1a1a', fontWeight:'700', letterSpacing: '-0.3px'}}>{l.nome}</h4>
-                        <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#888', marginBottom: '25px', fontWeight: '500'}}>
-                          <IconPin /><span>{l.cep}</span>
-                          <IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span>
-                        </div>
-
-                        <div style={{display:'flex', gap:'10px', marginBottom: '25px'}}>
-                          <span style={{fontSize:'10px', background: styleStatus.bg, color: styleStatus.color, padding:'6px 14px', borderRadius:'12px', fontWeight:'700', textTransform: 'uppercase'}}>{l.status || 'Pendente'}</span>
-                          <span style={{fontSize:'10px', background: styleOrigem.bg, color: styleOrigem.color, padding:'6px 14px', borderRadius:'12px', fontWeight:'700', textTransform: 'uppercase'}}>{l.origem}</span>
-                        </div>
-
-                        <div style={{borderTop: '1px solid #f9f9f9', paddingTop: '20px'}}>
-                          <div style={{fontSize: '10px', color: '#aaa', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase'}}>Orçamento Estimado</div>
-                          <div style={{fontSize:'20px', color:'#111', fontWeight:'800'}}>R$ {formatarMoeda(l.valorOrcamento)}</div>
-                        </div>
-
-                        {l.observacoes && (
-                          <div style={{marginTop:'20px', background:'#fafafa', padding:'14px', borderRadius:'14px', fontSize:'12px', color:'#666', lineHeight:'1.6', border: '1px solid #f0f0f0'}}>
-                            {l.observacoes}
-                          </div>
-                        )}
+                  {leads.map(l => (
+                    <div key={l.id} style={{background:'#ffffff', padding:'32px', borderRadius:'24px', position:'relative', boxShadow:'0 4px 20px rgba(0,0,0,0.02)', border:'1px solid #f5f5f5'}}>
+                      
+                      {/* ÁREA DE AÇÕES REATIVAS */}
+                      <div style={{position:'absolute', right:'24px', top:'24px', display:'flex', gap:'8px'}}>
+                        <ActionButton onClick={() => iniciarEdicao(l)} hoverColor="#ff6b00">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
+                        </ActionButton>
+                        <ActionButton onClick={async () => { if(window.confirm("Apagar?")) await deleteDoc(doc(db, "leads", l.id)); }} hoverColor="#ef4444">
+                          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
+                        </ActionButton>
                       </div>
-                    );
-                  })}
+
+                      <div style={{display:'flex', gap:'8px', marginBottom:'20px', alignItems:'center'}}>
+                          <span style={{fontSize:'9px', fontWeight:'700', color: l.categoria === 'HIGH TICKET' ? '#b45309' : '#64748b'}}>{l.categoria}</span>
+                          <span style={{fontSize:'9px', color: '#ccc'}}>•</span>
+                          <span style={{fontSize:'9px', fontWeight:'700', color: '#999'}}>{l.createdAt ? new Date(l.createdAt.toDate()).toLocaleDateString('pt-BR') : '--'}</span>
+                      </div>
+                      
+                      <h4 style={{margin:'0 0 8px 0', fontSize:'20px', color:'#1a1a1a', fontWeight:'700'}}>{l.nome}</h4>
+                      <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#888', marginBottom: '25px'}}>
+                        <IconPin /><span>{l.cep}</span>
+                        <IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span>
+                      </div>
+
+                      <div style={{display:'flex', gap:'10px', marginBottom: '25px'}}>
+                        <span style={{fontSize:'10px', background: '#f8fafc', color: '#475569', padding:'6px 14px', borderRadius:'12px', fontWeight:'700'}}>{l.status}</span>
+                        <span style={{fontSize:'10px', background: '#f8fafc', color: '#475569', padding:'6px 14px', borderRadius:'12px', fontWeight:'700'}}>{l.origem}</span>
+                      </div>
+
+                      <div style={{borderTop: '1px solid #f9f9f9', paddingTop: '20px'}}>
+                        <div style={{fontSize: '10px', color: '#aaa', fontWeight: 'bold', marginBottom: '4px'}}>VALOR ESTIMADO</div>
+                        <div style={{fontSize:'20px', color:'#1a1a1a', fontWeight:'800'}}>R$ {formatarMoeda(l.valorOrcamento)}</div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </>
             )}
 
             {view === 'novoLead' && (
-              <div style={{maxWidth:'550px', margin:'0 auto', background:'white', padding:'50px', borderRadius:'32px', boxShadow:'0 30px 60px rgba(0,0,0,0.05)', border: '1px solid #f5f5f5'}}>
-                <h2 style={{marginBottom:'40px', color:'#111', textAlign:'center', fontWeight:'800', fontSize:'24px', letterSpacing:'-0.5px'}}>{idLeadEditando ? 'Refinar Perfil' : 'Novo Lead Premium'}</h2>
+              <div style={{maxWidth:'550px', margin:'0 auto', background:'white', padding:'50px', borderRadius:'32px', border: '1px solid #f5f5f5'}}>
+                <h2 style={{marginBottom:'40px', color:'#111', textAlign:'center', fontWeight:'800'}}>{idLeadEditando ? 'Editar' : 'Novo'} Lead</h2>
                 <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'20px'}}>
-                  <input placeholder="Nome completo" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', fontSize:'15px', outline: 'none'}} />
+                  <input placeholder="Nome" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', outline:'none'}} />
                   <div style={{display:'flex', gap:'20px'}}>
-                    <input placeholder="CEP" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, outline: 'none'}} />
-                    <input type="date" value={nascimentoLead} onChange={e=>setNascimentoLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, outline: 'none'}} />
+                    <input placeholder="CEP" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', flex:1}} />
+                    <input type="date" value={nascimentoLead} onChange={e=>setNascimentoLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', flex:1}} />
                   </div>
                   <div style={{display:'flex', gap:'20px'}}>
-                    <select value={sexoLead} onChange={e=>setSexoLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, background:'white', outline: 'none'}}>
-                      <option value="Não Informado">Gênero...</option>
-                      <option value="Masculino">Masculino</option>
-                      <option value="Feminino">Feminino</option>
-                      <option value="Outro">Outro</option>
-                    </select>
-                    <input type="number" step="0.01" placeholder="Orçamento (R$)" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, outline: 'none'}} />
-                  </div>
-                  <div style={{display:'flex', gap:'20px'}}>
-                    <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, background:'white', outline: 'none'}}>
-                      <option value="Instagram">Instagram</option>
-                      <option value="Site">Site</option>
-                      <option value="Google">Google</option>
-                      <option value="Facebook">Facebook</option>
-                    </select>
-                    <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, background:'white', outline: 'none', fontWeight:'bold'}}>
+                    <input type="number" step="0.01" placeholder="R$" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', flex:1}} />
+                    <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', flex:1, background:'white'}}>
                       <option value="Agendado">Agendado</option>
                       <option value="Em atendimento">Em atendimento</option>
                       <option value="Não qualificado">Não qualificado</option>
                       <option value="Pendente">Pendente</option>
                     </select>
                   </div>
-                  <textarea placeholder="Observações..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', height:'100px', resize:'none', outline: 'none'}} />
-                  <button type="submit" disabled={isSaving} style={{padding:'20px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'16px', fontWeight:'700', fontSize:'16px', cursor:'pointer', marginTop:'15px'}}>
-                    {isSaving ? 'PROCESSANDO...' : 'CONFIRMAR'}
+                  <button type="submit" disabled={isSaving} style={{padding:'20px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'16px', fontWeight:'700'}}>
+                    {isSaving ? 'SALVANDO...' : 'CONFIRMAR'}
                   </button>
                 </form>
               </div>
