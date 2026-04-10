@@ -92,13 +92,12 @@ export default function App() {
     return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
   };
 
-  // --- LÓGICA DE CORES RECALIBRADA ---
   const getStatusStyle = (status) => {
     switch (status) {
-      case 'Agendado': return { bg: '#2563eb', color: '#fff' }; // Azul Royal
-      case 'Em atendimento': return { bg: '#eab308', color: '#000' }; // Amarelo Intenso
-      case 'Não qualificado': return { bg: '#4b5563', color: '#fff' }; // Cinza Chumbo
-      case 'Pendente': return { bg: '#f97316', color: '#fff' }; // Laranja Vibrante
+      case 'Agendado': return { bg: '#2563eb', color: '#fff' };
+      case 'Em atendimento': return { bg: '#eab308', color: '#000' };
+      case 'Não qualificado': return { bg: '#4b5563', color: '#fff' };
+      case 'Pendente': return { bg: '#f97316', color: '#fff' };
       default: return { bg: '#94a3b8', color: '#fff' };
     }
   };
@@ -116,11 +115,11 @@ export default function App() {
   const handleAutenticacao = async (e) => {
     e.preventDefault();
     const emailFake = `${celular.replace(/\D/g, '')}@klinni.ia`;
-    try { await signInWithEmailAndPassword(auth, emailFake, password); } catch (err) { alert("Erro."); }
+    try { await signInWithEmailAndPassword(auth, emailFake, password); } catch (err) { alert("Erro de acesso."); }
   };
 
   const handleExcluirLead = async (id, nome) => {
-    if (window.confirm(`Excluir permanentemente ${nome}?`)) {
+    if (window.confirm(`Excluir permanentemente o lead ${nome}?`)) {
       await deleteDoc(doc(db, "leads", id));
       mostrarMensagem("Excluído!");
     }
@@ -177,7 +176,7 @@ export default function App() {
     <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: 'sans-serif' }}>
       
       {aviso.visivel && (
-        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold' }}>
+        <div style={{ position: 'fixed', top: '25px', left: '50%', transform: 'translateX(-50%)', zIndex: 99999, background: '#22c55e', color: 'white', padding: '12px 24px', borderRadius: '50px', fontWeight: 'bold', boxShadow:'0 4px 12px rgba(0,0,0,0.1)' }}>
           {aviso.texto}
         </div>
       )}
@@ -211,36 +210,42 @@ export default function App() {
                   const styleOrigem = getOrigemStyle(l.origem);
                   const styleStatus = getStatusStyle(l.status);
                   return (
-                    <div key={l.id} style={{background:'white', padding:'22px', borderRadius:'18px', borderLeft: l.categoria === 'HIGH TICKET' ? '6px solid #ffb300' : '6px solid #ff6b00', position:'relative', boxShadow:'0 4px 15px rgba(0,0,0,0.05)'}}>
+                    <div key={l.id} style={{background:'white', padding:'25px', borderRadius:'20px', borderLeft: l.categoria === 'HIGH TICKET' ? '8px solid #ffb300' : '8px solid #ff6b00', position:'relative', boxShadow:'0 6px 18px rgba(0,0,0,0.06)'}}>
                       
-                      <div style={{position:'absolute', right:'18px', top:'18px', display:'flex', gap:'10px'}}>
-                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ccc', cursor:'pointer'}}><IconEdit /></button>
-                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ccc', cursor:'pointer'}}><IconTrash /></button>
+                      <div style={{position:'absolute', right:'18px', top:'20px', display:'flex', gap:'12px'}}>
+                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ccc', cursor:'pointer', padding: '4px'}}><IconEdit /></button>
+                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ccc', cursor:'pointer', padding: '4px'}}><IconTrash /></button>
                       </div>
 
-                      <div style={{display:'flex', gap:'6px', marginBottom:'12px', alignItems:'center', flexWrap:'wrap'}}>
-                          <span style={{fontSize:'8px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', border:`1px solid ${l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00'}`, padding:'2px 6px', borderRadius:'4px', textTransform:'uppercase'}}>{l.categoria}</span>
-                          <span style={{fontSize:'9px', background: styleStatus.bg, color: styleStatus.color, padding:'3px 10px', borderRadius:'6px', fontWeight:'900', textTransform: 'uppercase', letterSpacing:'0.5px'}}>
+                      <div style={{display:'flex', gap:'8px', marginBottom:'15px', alignItems:'center', flexWrap:'wrap'}}>
+                          <span style={{fontSize:'9px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', border:`1.5px solid ${l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00'}`, padding:'3px 8px', borderRadius:'6px', textTransform:'uppercase'}}>{l.categoria}</span>
+                          
+                          {/* TAG STATUS - REFINADA */}
+                          <span style={{fontSize:'10px', background: styleStatus.bg, color: styleStatus.color, padding:'4px 12px', borderRadius:'8px', fontWeight:'900', textTransform: 'uppercase', letterSpacing:'0.5px'}}>
                             {l.status || 'Pendente'}
+                          </span>
+
+                          {/* TAG ORIGEM - AUMENTADA CONFORME SOLICITADO */}
+                          <span style={{fontSize:'10px', background: styleOrigem.bg, color: styleOrigem.color, padding:'4px 12px', borderRadius:'8px', fontWeight:'800', textTransform: 'uppercase', letterSpacing:'0.5px', border: '1px solid rgba(0,0,0,0.05)'}}>
+                            {l.origem}
                           </span>
                       </div>
                       
-                      <h4 style={{margin:'0 0 4px 0', fontSize:'18px', color:'#111', fontWeight:'800', maxWidth:'75%'}}>{l.nome}</h4>
+                      <h4 style={{margin:'0 0 6px 0', fontSize:'20px', color:'#111', fontWeight:'800', maxWidth:'75%'}}>{l.nome}</h4>
                       
-                      <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#666', marginBottom: '12px'}}>
+                      <div style={{display:'flex', alignItems:'center', fontSize:'13px', color:'#666', marginBottom: '15px'}}>
                         <div style={{display:'flex', alignItems:'center'}}><IconPin /><span>{l.cep}</span></div>
                         <div style={{display:'flex', alignItems:'center'}}><IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span></div>
                       </div>
 
-                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
-                        {l.valorOrcamento > 0 ? (
-                          <span style={{fontSize:'16px', color:'#16a34a', fontWeight:'800'}}>R$ {formatarMoeda(l.valorOrcamento)}</span>
-                        ) : <span></span>}
-                        <span style={{fontSize:'8px', background: styleOrigem.bg, color: styleOrigem.color, padding:'2px 6px', borderRadius:'4px', fontWeight:'bold'}}>{l.origem}</span>
-                      </div>
+                      {l.valorOrcamento > 0 && (
+                        <div style={{fontSize:'18px', color:'#16a34a', fontWeight:'900', marginBottom: '12px'}}>
+                          R$ {formatarMoeda(l.valorOrcamento)}
+                        </div>
+                      )}
 
                       {l.observacoes && (
-                        <div style={{marginTop:'12px', background:'#f9fafb', padding:'8px 12px', borderRadius:'8px', fontSize:'11px', color:'#4b5563', borderLeft:'3px solid #ddd', fontStyle:'italic'}}>
+                        <div style={{marginTop:'12px', background:'#f9fafb', padding:'10px 14px', borderRadius:'10px', fontSize:'12px', color:'#4b5563', borderLeft:'4px solid #ddd', fontStyle:'italic', lineHeight:'1.5'}}>
                           {l.observacoes}
                         </div>
                       )}
@@ -306,7 +311,7 @@ export default function App() {
                   </div>
 
                   <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Observações</label>
-                  <textarea placeholder="Notas..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
+                  <textarea placeholder="Detalhes extras..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none', fontSize:'14px'}} />
 
                   <button type="submit" disabled={isSaving} style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'16px', cursor:'pointer', marginTop:'10px'}}>
                     {isSaving ? 'Gravando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR NO FUNIL'}
