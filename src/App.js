@@ -1,225 +1,194 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, 
-  onAuthStateChanged, signOut 
-} from "firebase/auth";
-import { 
-  getFirestore, collection, addDoc, query, where, onSnapshot, 
-  serverTimestamp, doc, updateDoc, getDoc, setDoc, deleteDoc, limit 
-} from "firebase/firestore";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, collection, addDoc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
 
-// --- CONFIGURAÇÃO FIREBASE ---
+// --- CONFIGURAÇÃO OFICIAL KLINNI IA ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM",
+  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
   authDomain: "klinni-ia.firebaseapp.com",
   projectId: "klinni-ia",
+  storageBucket: "klinni-ia.firebasestorage.app",
+  messagingSenderId: "761229946691",
+  appId: "1:761229946691:web:feeceb3caed42445be09f6"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-const theme = {
-  primary: "#f97316",
-  danger: "#ef4444",
-  success: "#10b981",
-  info: "#3b82f6",
-  bg: "#f1f5f9",
-  card: "#ffffff",
-  text: "#0f172a",
-  gray: "#64748b",
-  shadow: "0 4px 15px -3px rgba(0, 0, 0, 0.07)"
-};
-
-// --- ÍCONES ---
-const IconLayout = () => <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="3" y1="9" x2="21" y2="9"></line><line x1="9" y1="21" x2="9" y2="9"></line></svg>;
-const IconCalendar = () => <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>;
-const IconTrash = () => <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>;
-
 export default function App() {
   const [user, setUser] = useState(null);
-  const [userData, setUserData] = useState(null);
-  const [authMode, setAuthMode] = useState('login');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(true);
-  
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
-  const [filtroBusca, setFiltroBusca] = useState('');
-  const [filtroStatus, setFiltroStatus] = useState('Todos');
+  
+  // States Auth (CELULAR)
+  const [celular, setCelular] = useState('');
+  const [password, setPassword] = useState('');
+  const [modoRegistro, setModoRegistro] = useState(false);
 
-  // Form States
-  const [idEditando, setIdEditando] = useState(null);
+  // States Form Lead
   const [nomeLead, setNomeLead] = useState('');
-  const [telLead, setTelLead] = useState('');
   const [cepLead, setCepLead] = useState('');
   const [idadeLead, setIdadeLead] = useState('');
-  const [valorOrcamento, setValorOrcamento] = useState('');
-  const [statusLead, setStatusLead] = useState('Aberto');
-  const [dataAgendamento, setDataAgendamento] = useState('');
-  const [horaAgendamento, setHoraAgendamento] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
-  // --- AUTENTICAÇÃO ---
+  // State do Aviso (Toast)
+  const [aviso, setAviso] = useState({ visivel: false, texto: '' });
+
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (u) => {
-      if (u) {
-        const d = await getDoc(doc(db, "users", u.uid));
-        setUserData(d.data());
-        setUser(u);
-      } else {
-        setUser(null);
-        setUserData(null);
-      }
-      setLoading(false);
-    });
+    const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
     return () => unsubscribe();
   }, []);
 
-  const handleAuth = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-    const email = `${whatsapp.replace(/\D/g, '')}@klinni.ia`;
-    try {
-      if (authMode === 'register') {
-        const res = await createUserWithEmailAndPassword(auth, email, password);
-        const newUser = { uid: res.user.uid, whatsapp, role: 'gestor', clinicId: res.user.uid, createdAt: new Date() };
-        await setDoc(doc(db, "users", res.user.uid), newUser);
-        setUserData(newUser);
-      } else {
-        await signInWithEmailAndPassword(auth, email, password);
-      }
-    } catch (err) { alert("Erro: Verifique seus dados."); }
-    setLoading(false);
-  };
-
-  // --- BUSCA DE DADOS ---
   useEffect(() => {
-    if (!user || !userData) return;
-    const qLeads = query(collection(db, "leads"), where("clinicId", "==", userData.clinicId));
-    const unsub = onSnapshot(qLeads, (snap) => {
-      setLeads(snap.docs.map(d => ({ id: d.id, ...d.data() })));
-    });
-    return () => unsub();
-  }, [user, userData]);
+    if (!user) return;
+    const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+    return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+  }, [user]);
 
-  const handleSalvarLead = async (e) => {
-    e.preventDefault();
-    setIsSaving(true);
-    const payload = { 
-      nome: nomeLead, telefone: telLead, cep: cepLead, idade: parseInt(idadeLead), 
-      valor: valorOrcamento, status: statusLead, clinicId: userData.clinicId,
-      dataAgendamento: statusLead === 'Agendado' ? dataAgendamento : null,
-      horaAgendamento: statusLead === 'Agendado' ? horaAgendamento : null
-    };
-    try {
-      if (idEditando) await updateDoc(doc(db, "leads", idEditando), payload);
-      else await addDoc(collection(db, "leads"), { ...payload, createdAt: serverTimestamp() });
-      setView('dashboard'); setIdEditando(null);
-    } catch (err) { alert("Erro ao salvar."); }
-    setIsSaving(false);
+  const mostrarMensagem = (txt) => {
+    setAviso({ visivel: true, texto: txt });
+    setTimeout(() => setAviso({ visivel: false, texto: '' }), 3500);
   };
 
-  const handleDeleteLead = async (id) => {
-    if (window.confirm("Deseja excluir permanentemente este lead?")) {
-      await deleteDoc(doc(db, "leads", id));
+  const handleAutenticacao = async (e) => {
+    e.preventDefault();
+    // Transforma o número em um "e-mail" interno para o Firebase aceitar
+    const emailFake = `${celular.replace(/\D/g, '')}@klinni.ia`;
+    
+    try {
+      if (modoRegistro) {
+        await createUserWithEmailAndPassword(auth, emailFake, password);
+        mostrarMensagem("Conta criada com sucesso!");
+      } else {
+        await signInWithEmailAndPassword(auth, emailFake, password);
+        mostrarMensagem("Acesso autorizado!");
+      }
+    } catch (err) {
+      console.error(err.code);
+      if (err.code === 'auth/unauthorized-domain') {
+        alert("Erro: Este domínio não está autorizado no Firebase. Adicione o link do Vercel nas configurações.");
+      } else {
+        alert("Erro: Verifique o número e a senha (mínimo 6 dígitos).");
+      }
     }
   };
 
-  if (loading) return <div style={{display:'flex',height:'100vh',alignItems:'center',justifyContent:'center',background:theme.bg}}>Carregando Klinni...</div>;
+  const handleSalvarLead = async (e) => {
+    e.preventDefault();
+    if (isSaving) return;
+    setIsSaving(true);
 
-  // --- TELA DE LOGIN ---
-  if (!user) {
-    return (
-      <div style={{ height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: theme.bg }}>
-        <div style={{ background: '#fff', padding: 40, borderRadius: 32, boxShadow: theme.shadow, width: '90%', maxWidth: 400, textAlign: 'center' }}>
-          <h2 style={{ fontWeight: 800, fontSize: 24, marginBottom: 10 }}>KLINNI <span style={{ color: theme.primary }}>IA</span></h2>
-          <p style={{ color: theme.gray, fontSize: 14, marginBottom: 25 }}>{authMode === 'login' ? 'Acesse sua conta' : 'Crie sua conta (Gestor)'}</p>
-          <form onSubmit={handleAuth} style={{ display: 'flex', flexDirection: 'column', gap: 15 }}>
-            <input required placeholder="WhatsApp (apenas números)" value={whatsapp} onChange={e=>setWhatsapp(e.target.value)} style={{ padding: 16, borderRadius: 14, border: '1.5px solid #eee' }} />
-            <input required type="password" placeholder="Senha" value={password} onChange={e=>setPassword(e.target.value)} style={{ padding: 16, borderRadius: 14, border: '1.5px solid #eee' }} />
-            <button style={{ padding: 16, background: theme.primary, color: '#fff', border: 'none', borderRadius: 14, fontWeight: 800, cursor: 'pointer' }}>
-              {authMode === 'login' ? 'ENTRAR' : 'CADASTRAR'}
-            </button>
-          </form>
-          <button onClick={() => setAuthMode(authMode === 'login' ? 'register' : 'login')} style={{ background: 'none', border: 'none', color: theme.gray, marginTop: 20, cursor: 'pointer', fontSize: 13 }}>
-            {authMode === 'login' ? 'Novo por aqui? Cadastre-se' : 'Já tem conta? Entre'}
-          </button>
-        </div>
-      </div>
-    );
-  }
+    const nobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
+    const categoria = (nobres.includes(cepLead.substring(0, 5)) && parseInt(idadeLead) >= 20) ? "HIGH TICKET" : "Ticket Médio";
+    
+    try {
+      await addDoc(collection(db, "leads"), {
+        nome: nomeLead, cep: cepLead, idade: idadeLead, categoria,
+        status: "NOVO LEAD", userId: user.uid, createdAt: serverTimestamp()
+      });
 
-  // --- APP PRINCIPAL ---
+      mostrarMensagem(`Sucesso! ${nomeLead} foi classificado.`);
+      setNomeLead(''); setCepLead(''); setIdadeLead('');
+      
+      setTimeout(() => {
+        setView('dashboard');
+        setIsSaving(false);
+      }, 2500);
+    } catch (err) {
+      alert("Erro ao salvar no banco de dados.");
+      setIsSaving(false);
+    }
+  };
+
+  if (loading) return <div style={{padding:'50px', textAlign:'center', fontWeight:'bold'}}>KLINNI IA...</div>;
+
   return (
-    <div style={{ display: 'flex', minHeight: '100vh', background: theme.bg }}>
-      <aside style={{ width: 260, background: '#fff', borderRight: '1px solid #e2e8f0', position: 'fixed', height: '100vh' }}>
-        <div style={{ padding: '35px 25px' }}><h2 style={{ fontSize: 20, fontWeight: 800 }}>KLINNI <span style={{ color: theme.primary }}>IA</span></h2></div>
-        <nav style={{ padding: '0 15px' }}>
-          <button onClick={() => setView('dashboard')} style={{ width: '100%', display: 'flex', gap: 12, padding: '12px 15px', borderRadius: 12, border: 'none', background: view === 'dashboard' ? `${theme.primary}15` : 'transparent', color: view === 'dashboard' ? theme.primary : theme.gray, fontWeight: 700, cursor: 'pointer' }}><IconLayout /> Dashboard</button>
-          <button onClick={() => signOut(auth)} style={{ width: '100%', marginTop: 20, padding: 10, background: 'none', border: 'none', color: theme.danger, cursor: 'pointer', fontSize: 12 }}>Sair da Conta</button>
-        </nav>
-        <div style={{ padding: 20, position: 'absolute', bottom: 0, width: '100%' }}>
-          <button onClick={() => { setIdEditando(null); setNomeLead(''); setView('novoLead'); }} style={{ width: '100%', padding: '14px', background: theme.primary, color: '#fff', border: 'none', borderRadius: 12, fontWeight: 800, cursor: 'pointer' }}>+ Novo Lead</button>
+    <div style={{ minHeight: '100vh', background: '#f1f5f9', fontFamily: 'sans-serif', position: 'relative' }}>
+      
+      {/* AVISO VERDE (TOAST) - Sempre visível no topo da árvore DOM */}
+      {aviso.visivel && (
+        <div style={{
+          position: 'fixed', top: '25px', right: '25px', zIndex: 99999,
+          background: 'rgba(255, 255, 255, 0.9)', backdropFilter: 'blur(10px)',
+          padding: '16px 24px', borderRadius: '16px', display: 'flex', alignItems: 'center',
+          gap: '12px', boxShadow: '0 10px 30px rgba(0,0,0,0.1)', border: '1px solid #e2e8f0'
+        }}>
+          <div style={{width:'22px', height:'22px', background:'#22c55e', borderRadius:'50%', color:'white', display:'flex', justifyContent:'center', alignItems:'center', fontWeight:'bold', fontSize:'12px'}}>✓</div>
+          <span style={{color: '#1e293b', fontWeight: '700'}}>{aviso.texto}</span>
         </div>
-      </aside>
+      )}
 
-      <main style={{ flex: 1, marginLeft: 260, padding: '40px 5%' }}>
-        {view === 'dashboard' ? (
-          <div>
-            <header style={{ marginBottom: 30 }}>
-              <h3 style={{ margin: 0 }}>Olá, {userData?.role === 'gestor' ? 'Dr(a)' : 'CRC'}</h3>
-              <p style={{ color: theme.gray, fontSize: 14 }}>Aqui está o resumo da sua clínica.</p>
-            </header>
-
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: 20 }}>
-              {leads.map(l => (
-                <div key={l.id} style={{ padding: 22, background: '#fff', borderRadius: 20, boxShadow: theme.shadow, position: 'relative' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 12 }}>
-                    <span style={{ fontSize: 10, fontWeight: 800, color: theme.info, background: `${theme.info}15`, padding: '4px 8px', borderRadius: 6 }}>{l.status}</span>
-                    <div style={{ display: 'flex', gap: 10 }}>
-                        <button onClick={() => { setIdEditando(l.id); setNomeLead(l.nome); setStatusLead(l.status); setView('novoLead'); }} style={{ border: 'none', background: 'none', color: theme.primary, fontWeight: 700, fontSize: 11, cursor: 'pointer' }}>EDITAR</button>
-                        {/* REGRA DE NEGÓCIO: Só Gestor remove */}
-                        {userData?.role === 'gestor' && (
-                          <button onClick={() => handleDeleteLead(l.id)} style={{ border: 'none', background: 'none', color: theme.danger, cursor: 'pointer' }}><IconTrash /></button>
-                        )}
-                    </div>
-                  </div>
-                  <h4 style={{ margin: 0, fontWeight: 500 }}>{l.nome}</h4>
-                  <p style={{ margin: '5px 0', color: theme.success, fontWeight: 600 }}>{l.valor}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div style={{ maxWidth: 500, margin: '0 auto', background: '#fff', padding: 40, borderRadius: 28, boxShadow: theme.shadow }}>
-            <h3 style={{ marginBottom: 25, fontWeight: 800 }}>{idEditando ? "Editar" : "Novo"} Lead</h3>
-            <form onSubmit={handleSalvarLead} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 15 }}>
-              <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{ padding: 15, borderRadius: 12, border: '1.5px solid #eee', gridColumn: 'span 2' }}>
-                <option>Aberto</option><option>Agendado</option><option>Em tratamento</option><option>Não qualificado</option>
-              </select>
-              
-              {statusLead === 'Agendado' && (
-                <div style={{ gridColumn: 'span 2', display: 'flex', gap: 10, background: '#f8fafc', padding: 15, borderRadius: 12 }}>
-                  <input type="date" value={dataAgendamento} onChange={e=>setDataAgendamento(e.target.value)} style={{ flex: 1, padding: 8 }} />
-                  <input type="time" value={horaAgendamento} onChange={e=>setHoraAgendamento(e.target.value)} style={{ flex: 1, padding: 8 }} />
-                </div>
-              )}
-
-              <input required placeholder="Nome" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} style={{ gridColumn: 'span 2', padding: 15, borderRadius: 12, border: '1.5px solid #eee' }} />
-              <input required placeholder="WhatsApp" value={telLead} onChange={e=>setTelLead(e.target.value)} style={{ gridColumn: 'span 2', padding: 15, borderRadius: 12, border: '1.5px solid #eee' }} />
-              <input required placeholder="CEP" value={cepLead} onChange={e=>setCepLead(e.target.value)} style={{ padding: 15, borderRadius: 12, border: '1.5px solid #eee' }} />
-              <input required placeholder="Idade" type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} style={{ padding: 15, borderRadius: 12, border: '1.5px solid #eee' }} />
-              <input placeholder="Valor R$" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{ gridColumn: 'span 2', padding: 15, borderRadius: 12, border: '1.5px solid #eee' }} />
-
-              <button disabled={isSaving} style={{ gridColumn: 'span 2', padding: 18, background: theme.primary, color: '#fff', border: 'none', borderRadius: 14, fontWeight: 800, cursor: 'pointer', marginTop: 10 }}>CONFIRMAR</button>
-              <button type="button" onClick={() => setView('dashboard')} style={{ gridColumn: 'span 2', background: 'none', border: 'none', color: theme.gray, cursor: 'pointer' }}>CANCELAR</button>
+      {!user ? (
+        <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#0070f3'}}>
+          <div style={{background:'white', padding:'40px', borderRadius:'25px', width:'320px', textAlign:'center'}}>
+            <h1 style={{color:'#0070f3', marginBottom:'5px', fontWeight:'900'}}>KLINNI <span style={{fontWeight:'300'}}>IA</span></h1>
+            <p style={{color:'#64748b', fontSize:'14px', marginBottom:'25px'}}>Acesse com seu número</p>
+            <form onSubmit={handleAutenticacao} style={{display:'flex', flexDirection:'column', gap:'12px'}}>
+              <input 
+                placeholder="Número de Celular" 
+                value={celular} 
+                onChange={e=>setCelular(e.target.value)} 
+                required 
+                style={{padding:'14px', borderRadius:'10px', border:'1px solid #ddd', fontSize:'16px'}} 
+              />
+              <input 
+                type="password" 
+                placeholder="Senha (6+ dígitos)" 
+                value={password} 
+                onChange={e=>setPassword(e.target.value)} 
+                required 
+                style={{padding:'14px', borderRadius:'10px', border:'1px solid #ddd', fontSize:'16px'}} 
+              />
+              <button style={{background:'#0070f3', color:'white', padding:'15px', border:'none', borderRadius:'10px', fontWeight:'bold', cursor:'pointer', fontSize:'16px'}}>
+                {modoRegistro ? 'Criar Conta' : 'Entrar no Sistema'}
+              </button>
             </form>
+            <p onClick={() => setModoRegistro(!modoRegistro)} style={{marginTop:'20px', fontSize:'13px', color:'#64748b', cursor:'pointer'}}>
+              {modoRegistro ? 'Já sou cadastrado' : 'Ainda não tenho acesso'}
+            </p>
           </div>
-        )}
-      </main>
+        </div>
+      ) : (
+        <>
+          <nav style={{display:'flex', justifyContent:'space-between', padding:'20px 50px', background:'white', alignItems:'center', borderBottom:'1px solid #eee'}}>
+            <h2 style={{color:'#0070f3', margin:0}}>KLINNI <span style={{fontWeight:'300'}}>IA</span></h2>
+            <div style={{display:'flex', gap:'20px'}}>
+              <button onClick={()=>setView('dashboard')} style={{background:'none', border:'none', cursor:'pointer', color: view === 'dashboard' ? '#0070f3' : '#64748b', fontWeight: 'bold'}}>Dashboard</button>
+              <button onClick={()=>setView('novoLead')} style={{background:'none', border:'none', cursor:'pointer', color: view === 'novoLead' ? '#0070f3' : '#64748b', fontWeight: 'bold'}}>+ Novo Lead</button>
+              <button onClick={()=>signOut(auth)} style={{color:'#ef4444', border:'none', background:'none', cursor:'pointer'}}>Sair</button>
+            </div>
+          </nav>
+
+          <main style={{padding:'40px 50px'}}>
+            {view === 'dashboard' ? (
+              <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px'}}>
+                {leads.map(l => (
+                  <div key={l.id} style={{background:'white', padding:'25px', borderRadius:'20px', border: l.categoria === 'HIGH TICKET' ? '2px solid #fbbf24' : '1px solid #eee'}}>
+                    <span style={{fontSize:'10px', fontWeight:'800', color: l.categoria === 'HIGH TICKET' ? '#d97706' : '#0070f3', background: l.categoria === 'HIGH TICKET' ? '#fef3c7' : '#eff6ff', padding:'4px 8px', borderRadius:'6px'}}>{l.categoria}</span>
+                    <h3 style={{margin:'15px 0 5px 0', color:'#1e293b'}}>{l.nome}</h3>
+                    <p style={{fontSize:'13px', color:'#94a3b8', margin:0}}>📍 Salvador - CEP: {l.cep} | {l.idade} anos</p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div style={{maxWidth:'400px', margin:'0 auto', background:'white', padding:'40px', borderRadius:'25px', boxShadow:'0 10px 25px rgba(0,0,0,0.05)'}}>
+                <h2 style={{marginBottom:'25px', textAlign:'center'}}>Cadastrar Lead</h2>
+                <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'15px'}}>
+                  <input placeholder="Nome do Lead" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'14px', borderRadius:'10px', border:'1px solid #eee'}} />
+                  <input placeholder="CEP (Salvador)" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'14px', borderRadius:'10px', border:'1px solid #eee'}} />
+                  <input placeholder="Idade" type="number" value={idadeLead} onChange={e=>setIdadeLead(e.target.value)} required style={{padding:'14px', borderRadius:'10px', border:'1px solid #eee'}} />
+                  <button type="submit" disabled={isSaving} style={{background:'#0070f3', color:'white', padding:'16px', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'16px', cursor:'pointer'}}>
+                    {isSaving ? 'Analisando...' : 'Classificar com IA'}
+                  </button>
+                </form>
+              </div>
+            )}
+          </main>
+        </>
+      )}
     </div>
   );
 }
