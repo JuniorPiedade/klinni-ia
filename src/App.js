@@ -3,7 +3,22 @@ import { initializeApp } from "firebase/app";
 import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "firebase/auth";
 import { getFirestore, collection, addDoc, updateDoc, deleteDoc, doc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
 
-// --- ÍCONES ELEGANTES ---
+// --- ÍCONES PREMIUM ---
+const IconWallet = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '12px', opacity: 0.6 }}>
+    <path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path>
+    <path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path>
+    <path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path>
+  </svg>
+);
+
+const IconTrend = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '12px', opacity: 0.6 }}>
+    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline>
+    <polyline points="17 6 23 6 23 12"></polyline>
+  </svg>
+);
+
 const IconPin = () => (
   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '6px' }}>
     <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path>
@@ -81,6 +96,15 @@ export default function App() {
     return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
+  // --- LÓGICA DO FAROL (TOTAIS) ---
+  const totalPendente = leads
+    .filter(l => l.status === 'Pendente')
+    .reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
+
+  const totalAtendimento = leads
+    .filter(l => l.status === 'Em atendimento')
+    .reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
+
   const mostrarMensagem = (txt) => {
     setAviso({ visivel: true, texto: txt });
     setTimeout(() => setAviso({ visivel: false, texto: '' }), 3000);
@@ -90,7 +114,6 @@ export default function App() {
     return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
   };
 
-  // --- PALETA DE CORES PREMIUM (SOFT) ---
   const getStatusStyle = (status) => {
     switch (status) {
       case 'Agendado': return { bg: '#eff6ff', color: '#1d4ed8' };
@@ -125,15 +148,10 @@ export default function App() {
   };
 
   const iniciarEdicao = (lead) => {
-    setIdLeadEditando(lead.id);
-    setNomeLead(lead.nome);
-    setCepLead(lead.cep);
-    setNascimentoLead(lead.dataNascimento);
-    setOrigemLead(lead.origem);
-    setSexoLead(lead.sexo || 'Não Informado');
-    setValorOrcamento(lead.valorOrcamento || '');
-    setStatusLead(lead.status || 'Pendente');
-    setObsLead(lead.observacoes || '');
+    setIdLeadEditando(lead.id); setNomeLead(lead.nome); setCepLead(lead.cep);
+    setNascimentoLead(lead.dataNascimento); setOrigemLead(lead.origem);
+    setSexoLead(lead.sexo || 'Não Informado'); setValorOrcamento(lead.valorOrcamento || '');
+    setStatusLead(lead.status || 'Pendente'); setObsLead(lead.observacoes || '');
     setView('novoLead');
   };
 
@@ -202,124 +220,113 @@ export default function App() {
             </div>
           </nav>
 
-          <main style={{padding:'50px 60px'}}>
-            {view === 'dashboard' ? (
-              <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:'25px'}}>
-                {leads.map(l => {
-                  const styleOrigem = getOrigemStyle(l.origem);
-                  const styleStatus = getStatusStyle(l.status);
-                  return (
-                    <div key={l.id} style={{background:'#ffffff', padding:'32px', borderRadius:'24px', position:'relative', boxShadow:'0 4px 20px rgba(0,0,0,0.02)', border:'1px solid #f5f5f5', transition: 'transform 0.3s', cursor: 'default'}} onMouseEnter={(e)=>e.currentTarget.style.transform='translateY(-5px)'} onMouseLeave={(e)=>e.currentTarget.style.transform='translateY(0)'}>
-                      
-                      <div style={{position:'absolute', right:'24px', top:'24px', display:'flex', gap:'12px'}}>
-                        <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer', transition: '0.2s'}} onMouseEnter={(e)=>e.target.style.color='#ff6b00'} onMouseLeave={(e)=>e.target.style.color='#ddd'}><IconEdit /></button>
-                        <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer', transition: '0.2s'}} onMouseEnter={(e)=>e.target.style.color='#ef4444'} onMouseLeave={(e)=>e.target.style.color='#ddd'}><IconTrash /></button>
-                      </div>
+          <main style={{padding:'40px 60px'}}>
+            {view === 'dashboard' && (
+              <>
+                {/* --- FAROL ESTRATÉGICO --- */}
+                <div style={{display: 'flex', gap: '20px', marginBottom: '40px'}}>
+                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.02)'}}>
+                    <div style={{width: '48px', height: '48px', background: '#fff7ed', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c2410c'}}>
+                      <IconWallet />
+                    </div>
+                    <div style={{marginLeft: '20px'}}>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Volume Pendente</div>
+                      <div style={{fontSize: '22px', color: '#1a1a1a', fontWeight: '800', marginTop: '4px'}}>R$ {formatarMoeda(totalPendente)}</div>
+                    </div>
+                  </div>
 
-                      <div style={{display:'flex', gap:'8px', marginBottom:'20px', alignItems:'center'}}>
-                          <span style={{fontSize:'9px', fontWeight:'700', color: l.categoria === 'HIGH TICKET' ? '#b45309' : '#64748b', letterSpacing: '0.5px'}}>{l.categoria}</span>
-                          <div style={{width: '4px', height: '4px', background: '#ddd', borderRadius: '50%'}}></div>
-                          <span style={{fontSize:'9px', fontWeight:'700', color: '#999'}}>{new Date(l.createdAt?.toDate()).toLocaleDateString('pt-BR')}</span>
-                      </div>
-                      
-                      <h4 style={{margin:'0 0 8px 0', fontSize:'20px', color:'#1a1a1a', fontWeight:'700', letterSpacing: '-0.3px'}}>{l.nome}</h4>
-                      
-                      <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#888', marginBottom: '25px', fontWeight: '500'}}>
-                        <IconPin /><span>{l.cep}</span>
-                        <IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span>
-                      </div>
+                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', boxShadow: '0 10px 30px rgba(0,0,0,0.02)'}}>
+                    <div style={{width: '48px', height: '48px', background: '#fffbeb', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b45309'}}>
+                      <IconTrend />
+                    </div>
+                    <div style={{marginLeft: '20px'}}>
+                      <div style={{fontSize: '11px', color: '#aaa', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px'}}>Em Atendimento</div>
+                      <div style={{fontSize: '22px', color: '#1a1a1a', fontWeight: '800', marginTop: '4px'}}>R$ {formatarMoeda(totalAtendimento)}</div>
+                    </div>
+                  </div>
+                </div>
 
-                      <div style={{display:'flex', gap:'10px', marginBottom: '25px'}}>
-                        <span style={{fontSize:'10px', background: styleStatus.bg, color: styleStatus.color, padding:'6px 14px', borderRadius:'12px', fontWeight:'700', textTransform: 'uppercase', letterSpacing:'0.3px'}}>
-                          {l.status || 'Pendente'}
-                        </span>
-                        <span style={{fontSize:'10px', background: styleOrigem.bg, color: styleOrigem.color, padding:'6px 14px', borderRadius:'12px', fontWeight:'700', textTransform: 'uppercase', letterSpacing:'0.3px'}}>
-                          {l.origem}
-                        </span>
-                      </div>
+                {/* --- GRID DE LEADS --- */}
+                <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:'25px'}}>
+                  {leads.map(l => {
+                    const styleOrigem = getOrigemStyle(l.origem);
+                    const styleStatus = getStatusStyle(l.status);
+                    return (
+                      <div key={l.id} style={{background:'#ffffff', padding:'32px', borderRadius:'24px', position:'relative', boxShadow:'0 4px 20px rgba(0,0,0,0.02)', border:'1px solid #f5f5f5', transition: '0.3s'}} onMouseEnter={(e)=>e.currentTarget.style.transform='translateY(-5px)'} onMouseLeave={(e)=>e.currentTarget.style.transform='translateY(0)'}>
+                        <div style={{position:'absolute', right:'24px', top:'24px', display:'flex', gap:'12px'}}>
+                          <button onClick={() => iniciarEdicao(l)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconEdit /></button>
+                          <button onClick={() => handleExcluirLead(l.id, l.nome)} style={{background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconTrash /></button>
+                        </div>
 
-                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-end', borderTop: '1px solid #f9f9f9', paddingTop: '20px'}}>
-                        <div>
+                        <div style={{display:'flex', gap:'8px', marginBottom:'20px', alignItems:'center'}}>
+                            <span style={{fontSize:'9px', fontWeight:'700', color: l.categoria === 'HIGH TICKET' ? '#b45309' : '#64748b', letterSpacing: '0.5px'}}>{l.categoria}</span>
+                            <div style={{width: '4px', height: '4px', background: '#ddd', borderRadius: '50%'}}></div>
+                            <span style={{fontSize:'9px', fontWeight:'700', color: '#999'}}>{l.createdAt ? new Date(l.createdAt.toDate()).toLocaleDateString('pt-BR') : '--'}</span>
+                        </div>
+                        
+                        <h4 style={{margin:'0 0 8px 0', fontSize:'20px', color:'#1a1a1a', fontWeight:'700', letterSpacing: '-0.3px'}}>{l.nome}</h4>
+                        <div style={{display:'flex', alignItems:'center', fontSize:'12px', color:'#888', marginBottom: '25px', fontWeight: '500'}}>
+                          <IconPin /><span>{l.cep}</span>
+                          <IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span>
+                        </div>
+
+                        <div style={{display:'flex', gap:'10px', marginBottom: '25px'}}>
+                          <span style={{fontSize:'10px', background: styleStatus.bg, color: styleStatus.color, padding:'6px 14px', borderRadius:'12px', fontWeight:'700', textTransform: 'uppercase'}}>{l.status || 'Pendente'}</span>
+                          <span style={{fontSize:'10px', background: styleOrigem.bg, color: styleOrigem.color, padding:'6px 14px', borderRadius:'12px', fontWeight:'700', textTransform: 'uppercase'}}>{l.origem}</span>
+                        </div>
+
+                        <div style={{borderTop: '1px solid #f9f9f9', paddingTop: '20px'}}>
                           <div style={{fontSize: '10px', color: '#aaa', fontWeight: 'bold', marginBottom: '4px', textTransform: 'uppercase'}}>Orçamento Estimado</div>
                           <div style={{fontSize:'20px', color:'#111', fontWeight:'800'}}>R$ {formatarMoeda(l.valorOrcamento)}</div>
                         </div>
-                      </div>
 
-                      {l.observacoes && (
-                        <div style={{marginTop:'20px', background:'#fafafa', padding:'14px', borderRadius:'14px', fontSize:'12px', color:'#666', lineHeight:'1.6', border: '1px solid #f0f0f0'}}>
-                          {l.observacoes}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            ) : (
+                        {l.observacoes && (
+                          <div style={{marginTop:'20px', background:'#fafafa', padding:'14px', borderRadius:'14px', fontSize:'12px', color:'#666', lineHeight:'1.6', border: '1px solid #f0f0f0'}}>
+                            {l.observacoes}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {view === 'novoLead' && (
               <div style={{maxWidth:'550px', margin:'0 auto', background:'white', padding:'50px', borderRadius:'32px', boxShadow:'0 30px 60px rgba(0,0,0,0.05)', border: '1px solid #f5f5f5'}}>
                 <h2 style={{marginBottom:'40px', color:'#111', textAlign:'center', fontWeight:'800', fontSize:'24px', letterSpacing:'-0.5px'}}>{idLeadEditando ? 'Refinar Perfil' : 'Novo Lead Premium'}</h2>
-                
                 <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'20px'}}>
-                  <div>
-                    <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Identificação</label>
-                    <input placeholder="Nome completo" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', fontSize:'15px', width:'100%', marginTop: '8px', outline: 'none'}} />
-                  </div>
-                  
+                  <input placeholder="Nome completo" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', fontSize:'15px', outline: 'none'}} />
                   <div style={{display:'flex', gap:'20px'}}>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Localização (CEP)</label>
-                      <input placeholder="00000-000" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', width:'100%', fontSize:'15px', marginTop: '8px', outline: 'none'}} />
-                    </div>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Nascimento</label>
-                      <input type="date" value={nascimentoLead} onChange={e=>setNascimentoLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', width:'100%', fontSize:'15px', marginTop: '8px', outline: 'none'}} />
-                    </div>
+                    <input placeholder="CEP" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, outline: 'none'}} />
+                    <input type="date" value={nascimentoLead} onChange={e=>setNascimentoLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, outline: 'none'}} />
                   </div>
-
                   <div style={{display:'flex', gap:'20px'}}>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Gênero</label>
-                      <select value={sexoLead} onChange={e=>setSexoLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', width:'100%', background:'white', fontSize:'15px', marginTop: '8px', outline: 'none'}}>
-                        <option value="Não Informado">Selecione...</option>
-                        <option value="Masculino">Masculino</option>
-                        <option value="Feminino">Feminino</option>
-                        <option value="Outro">Outro</option>
-                      </select>
-                    </div>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Potencial (R$)</label>
-                      <input type="number" step="0.01" placeholder="0.00" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', width:'100%', fontSize:'15px', marginTop: '8px', outline: 'none'}} />
-                    </div>
+                    <select value={sexoLead} onChange={e=>setSexoLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, background:'white', outline: 'none'}}>
+                      <option value="Não Informado">Gênero...</option>
+                      <option value="Masculino">Masculino</option>
+                      <option value="Feminino">Feminino</option>
+                      <option value="Outro">Outro</option>
+                    </select>
+                    <input type="number" step="0.01" placeholder="Orçamento (R$)" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, outline: 'none'}} />
                   </div>
-
                   <div style={{display:'flex', gap:'20px'}}>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Canal de Origem</label>
-                      <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', width:'100%', background:'white', fontSize:'15px', marginTop: '8px', outline: 'none'}}>
-                        <option value="Instagram">Instagram</option>
-                        <option value="Site">Site</option>
-                        <option value="Google">Google</option>
-                        <option value="Facebook">Facebook</option>
-                        <option value="Outros">Outros</option>
-                      </select>
-                    </div>
-                    <div style={{flex:1}}>
-                      <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Etapa do Funil</label>
-                      <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', width:'100%', background:'white', fontSize:'15px', marginTop: '8px', outline: 'none', fontWeight: 'bold'}}>
-                        <option value="Agendado">Agendado</option>
-                        <option value="Em atendimento">Em atendimento</option>
-                        <option value="Não qualificado">Não qualificado</option>
-                        <option value="Pendente">Pendente</option>
-                      </select>
-                    </div>
+                    <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, background:'white', outline: 'none'}}>
+                      <option value="Instagram">Instagram</option>
+                      <option value="Site">Site</option>
+                      <option value="Google">Google</option>
+                      <option value="Facebook">Facebook</option>
+                    </select>
+                    <select value={statusLead} onChange={e=>setStatusLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', flex:1, background:'white', outline: 'none', fontWeight:'bold'}}>
+                      <option value="Agendado">Agendado</option>
+                      <option value="Em atendimento">Em atendimento</option>
+                      <option value="Não qualificado">Não qualificado</option>
+                      <option value="Pendente">Pendente</option>
+                    </select>
                   </div>
-
-                  <div>
-                    <label style={{fontSize:'12px', fontWeight:'700', color:'#aaa', textTransform: 'uppercase', marginLeft: '4px'}}>Notas Estratégicas</label>
-                    <textarea placeholder="Observações importantes sobre o lead..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', height:'100px', resize:'none', width:'100%', marginTop: '8px', fontSize:'14px', outline: 'none'}} />
-                  </div>
-
-                  <button type="submit" disabled={isSaving} style={{padding:'20px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'16px', fontWeight:'700', fontSize:'16px', cursor:'pointer', marginTop:'15px', transition: '0.3s'}} onMouseEnter={(e)=>e.target.style.background='#ff6b00'} onMouseLeave={(e)=>e.target.style.background='#1a1a1a'}>
-                    {isSaving ? 'PROCESSANDO...' : idLeadEditando ? 'ATUALIZAR REGISTRO' : 'CONFIRMAR CADASTRO'}
+                  <textarea placeholder="Observações..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1.5px solid #eee', height:'100px', resize:'none', outline: 'none'}} />
+                  <button type="submit" disabled={isSaving} style={{padding:'20px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'16px', fontWeight:'700', fontSize:'16px', cursor:'pointer', marginTop:'15px'}}>
+                    {isSaving ? 'PROCESSANDO...' : 'CONFIRMAR'}
                   </button>
                 </form>
               </div>
