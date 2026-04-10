@@ -27,13 +27,6 @@ const IconEdit = () => (
   </svg>
 );
 
-const IconMoney = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ marginRight: '4px' }}>
-    <line x1="12" y1="1" x2="12" y2="23"></line>
-    <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path>
-  </svg>
-);
-
 // --- CONFIGURAÇÃO OFICIAL KLINNI IA ---
 const firebaseConfig = {
   apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
@@ -58,7 +51,6 @@ export default function App() {
   const [password, setPassword] = useState('');
   const [modoRegistro, setModoRegistro] = useState(false);
 
-  // States Formulário Expandidos
   const [idLeadEditando, setIdLeadEditando] = useState(null);
   const [nomeLead, setNomeLead] = useState('');
   const [cepLead, setCepLead] = useState('');
@@ -87,6 +79,11 @@ export default function App() {
     setTimeout(() => setAviso({ visivel: false, texto: '' }), 3500);
   };
 
+  const formatarMoeda = (valor) => {
+    if (!valor) return '';
+    return new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(valor);
+  };
+
   const getOrigemStyle = (origem) => {
     switch (origem) {
       case 'Facebook': return { bg: 'rgba(3, 105, 161, 0.08)', color: '#0369a1', border: 'rgba(3, 105, 161, 0.2)' };
@@ -104,7 +101,7 @@ export default function App() {
     try {
       if (modoRegistro) {
         await createUserWithEmailAndPassword(auth, emailFake, password);
-        mostrarMensagem("Conta criada com sucesso!");
+        mostrarMensagem("Conta criada!");
       } else {
         await signInWithEmailAndPassword(auth, emailFake, password);
         mostrarMensagem("Acesso autorizado!");
@@ -127,14 +124,8 @@ export default function App() {
   };
 
   const resetForm = () => {
-    setIdLeadEditando(null);
-    setNomeLead('');
-    setCepLead('');
-    setNascimentoLead('');
-    setOrigemLead('Instagram');
-    setSexoLead('Não Informado');
-    setValorOrcamento('');
-    setObsLead('');
+    setIdLeadEditando(null); setNomeLead(''); setCepLead(''); setNascimentoLead('');
+    setOrigemLead('Instagram'); setSexoLead('Não Informado'); setValorOrcamento(''); setObsLead('');
   };
 
   const handleSalvarLead = async (e) => {
@@ -146,17 +137,17 @@ export default function App() {
     
     const dadosLead = {
       nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
-      origem: origemLead, sexo: sexoLead, valorOrcamento: valorOrcamento, 
+      origem: origemLead, sexo: sexoLead, valorOrcamento: parseFloat(valorOrcamento) || 0, 
       observacoes: obsLead, categoria, userId: user.uid, updatedAt: serverTimestamp()
     };
 
     try {
       if (idLeadEditando) {
         await updateDoc(doc(db, "leads", idLeadEditando), dadosLead);
-        mostrarMensagem("Perfil atualizado!");
+        mostrarMensagem("Lead atualizado!");
       } else {
         await addDoc(collection(db, "leads"), { ...dadosLead, createdAt: serverTimestamp() });
-        mostrarMensagem("Lead cadastrado!");
+        mostrarMensagem("Lead salvo!");
       }
       resetForm();
       setTimeout(() => { setView('dashboard'); setIsSaving(false); }, 1500);
@@ -181,13 +172,11 @@ export default function App() {
         <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff'}}>
           <div style={{width:'340px', padding:'40px', textAlign:'center', border:'1px solid #eee', borderRadius:'25px'}}>
             <h1 style={{fontSize:'36px', color:'#ff6b00', marginBottom:'5px', fontWeight:'900'}}>KLINNI <span style={{fontWeight:'300', color:'#333'}}>IA</span></h1>
-            <p style={{color:'#666', marginBottom:'30px'}}>Painel de Controle</p>
             <form onSubmit={handleAutenticacao} style={{display:'flex', flexDirection:'column', gap:'15px'}}>
-              <input placeholder="Celular" value={celular} onChange={e=>setCelular(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #eee', fontSize:'16px'}} />
-              <input type="password" placeholder="Senha" value={password} onChange={e=>setPassword(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #eee', fontSize:'16px'}} />
-              <button style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', cursor:'pointer', fontSize:'16px'}}>ENTRAR</button>
+              <input placeholder="Celular" value={celular} onChange={e=>setCelular(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #eee'}} />
+              <input type="password" placeholder="Senha" value={password} onChange={e=>setPassword(e.target.value)} required style={{padding:'15px', borderRadius:'12px', border:'2px solid #eee'}} />
+              <button style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', cursor:'pointer'}}>ENTRAR</button>
             </form>
-            <button onClick={() => setModoRegistro(!modoRegistro)} style={{marginTop:'25px', background:'none', border:'none', color:'#ff6b00', cursor:'pointer', fontWeight:'bold'}}>{modoRegistro ? 'Voltar' : 'Criar minha conta'}</button>
           </div>
         </div>
       ) : (
@@ -209,7 +198,7 @@ export default function App() {
                   return (
                     <div key={l.id} style={{background:'white', padding:'30px', borderRadius:'20px', boxShadow:'0 4px 12px rgba(0,0,0,0.05)', borderLeft: l.categoria === 'HIGH TICKET' ? '8px solid #ffb300' : '8px solid #ff6b00', position:'relative'}}>
                       
-                      <button onClick={() => iniciarEdicao(l)} style={{position:'absolute', right:'20px', top:'75px', background:'none', border:'none', color:'#ddd', cursor:'pointer'}} title="Editar"><IconEdit /></button>
+                      <button onClick={() => iniciarEdicao(l)} style={{position:'absolute', right:'20px', top:'75px', background:'none', border:'none', color:'#ddd', cursor:'pointer'}}><IconEdit /></button>
 
                       <div style={{display:'flex', justifyContent:'space-between', alignItems:'flex-start'}}>
                           <span style={{fontSize:'10px', fontWeight:'900', color: l.categoria === 'HIGH TICKET' ? '#ffb300' : '#ff6b00', textTransform:'uppercase', letterSpacing: '1px'}}>{l.categoria}</span>
@@ -217,22 +206,22 @@ export default function App() {
                       </div>
                       
                       <h4 style={{margin:'15px 0 5px 0', fontSize:'22px', color:'#333', fontWeight:'700'}}>{l.nome}</h4>
-                      <p style={{fontSize:'12px', color:'#aaa', margin:'0 0 15px 0', textTransform:'uppercase'}}>{l.sexo}</p>
+                      <p style={{fontSize:'11px', color:'#bbb', margin:'0 0 15px 0', textTransform:'uppercase', fontWeight:'bold'}}>{l.sexo}</p>
                       
                       <div style={{display:'flex', alignItems:'center', fontSize:'13px', color:'#666', marginBottom:'10px'}}>
                         <div style={{display:'flex', alignItems:'center', color: '#ff6b00'}}><IconPin /><span>{l.cep}</span></div>
                         <div style={{display:'flex', alignItems:'center', marginLeft: '8px'}}><IconCake /><span>{new Date(l.dataNascimento).toLocaleDateString('pt-BR')}</span></div>
                       </div>
 
-                      {l.valorOrcamento && (
-                        <div style={{display:'flex', alignItems:'center', fontSize:'14px', color:'#22c55e', fontWeight:'bold', marginBottom:'10px'}}>
-                           <IconMoney /> R$ {l.valorOrcamento}
+                      {l.valorOrcamento > 0 && (
+                        <div style={{fontSize:'16px', color:'#22c55e', fontWeight:'700', marginBottom:'15px', letterSpacing:'-0.5px'}}>
+                           R$ {formatarMoeda(l.valorOrcamento)}
                         </div>
                       )}
 
                       {l.observacoes && (
-                        <div style={{background:'#f9f9f9', padding:'10px', borderRadius:'10px', fontSize:'12px', color:'#777', fontStyle:'italic', borderLeft:'3px solid #eee'}}>
-                          "{l.observacoes}"
+                        <div style={{background:'#fcfcfc', padding:'12px', borderRadius:'10px', fontSize:'12px', color:'#666', border:'1px solid #f0f0f0', fontStyle:'italic'}}>
+                          {l.observacoes}
                         </div>
                       )}
                     </div>
@@ -270,7 +259,7 @@ export default function App() {
                     </div>
                     <div style={{flex:1}}>
                       <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Orçamento (R$)</label>
-                      <input type="number" placeholder="Ex: 5000" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', width:'100%'}} />
+                      <input type="number" step="0.01" placeholder="Ex: 5000.00" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', width:'100%'}} />
                     </div>
                   </div>
 
@@ -284,10 +273,10 @@ export default function App() {
                   </select>
 
                   <label style={{fontSize:'13px', fontWeight:'bold', color:'#555'}}>Observações</label>
-                  <textarea placeholder="Detalhes do lead, interesses, etc..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none'}} />
+                  <textarea placeholder="Histórico, interesses ou detalhes importantes..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'12px', borderRadius:'10px', border:'2px solid #f0f0f0', height:'80px', resize:'none'}} />
 
                   <button type="submit" disabled={isSaving} style={{padding:'16px', background:'#ff6b00', color:'white', border:'none', borderRadius:'12px', fontWeight:'bold', fontSize:'16px', cursor:'pointer', marginTop:'10px'}}>
-                    {isSaving ? 'Processando...' : idLeadEditando ? 'ATUALIZAR' : 'CADASTRAR'}
+                    {isSaving ? 'Salvando...' : idLeadEditando ? 'SALVAR ALTERAÇÕES' : 'CADASTRAR LEAD'}
                   </button>
                 </form>
               </div>
