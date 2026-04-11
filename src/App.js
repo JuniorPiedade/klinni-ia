@@ -43,7 +43,6 @@ export default function App() {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   
-  // Login via Celular (tratado como identificador no Firebase Auth)
   const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
@@ -75,14 +74,24 @@ export default function App() {
     e.preventDefault();
     setAuthError('');
     
-    // Converte o número de celular para formato de e-mail compatível com Firebase Auth interno
-    const phoneEmail = `${phone.replace(/\D/g, '')}@klinni.com.br`;
+    // Limpa o número removendo parênteses, espaços e traços
+    const cleanPhone = phone.replace(/\D/g, '');
+    
+    // Se o número tiver 11 dígitos, tentamos o formato padrão que você cadastrou no Firebase
+    // Geralmente em sistemas que usam e-mail falso para celular, o formato é fixo
+    const phoneEmail = `${cleanPhone}@klinni.com`;
     
     try {
       await signInWithEmailAndPassword(auth, phoneEmail, password);
     } catch (err) {
-      console.error(err);
-      setAuthError('Celular ou senha inválidos.');
+      console.error("Erro no login:", err.code);
+      // Tentativa secundária caso o domínio seja .com.br
+      try {
+        const phoneEmailBr = `${cleanPhone}@klinni.com.br`;
+        await signInWithEmailAndPassword(auth, phoneEmailBr, password);
+      } catch (err2) {
+        setAuthError('Celular ou senha inválidos. Verifique os dados.');
+      }
     }
   };
 
@@ -142,16 +151,16 @@ export default function App() {
         <div style={{ width: '100%', maxWidth: '400px', padding: '40px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h1 style={{ fontWeight: '900', fontSize: '24px', letterSpacing: '-0.04em' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h1>
-            <p style={{ color: '#71717a', fontSize: '14px', marginTop: '8px' }}>Acesso com Número de Celular</p>
+            <p style={{ color: '#71717a', fontSize: '14px', marginTop: '8px' }}>Acesso Beta</p>
           </div>
           <form onSubmit={handleLogin} style={authFormStyle}>
             <div style={inputGroupStyle}>
-              <label style={labelStyle}>CELULAR (COM DDD)</label>
+              <label style={labelStyle}>NÚMERO DE CELULAR</label>
               <input 
                 type="tel" 
                 value={phone} 
                 onChange={e => setPhone(e.target.value)} 
-                placeholder="Ex: 71988887777" 
+                placeholder="Ex: 71999998888" 
                 required 
                 style={inputStyle} 
               />
@@ -161,7 +170,7 @@ export default function App() {
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={inputStyle} />
             </div>
             {authError && <p style={{ color: '#ef4444', fontSize: '12px', textAlign: 'center', fontWeight: '600' }}>{authError}</p>}
-            <button type="submit" style={submitBtnStyle}>ENTRAR</button>
+            <button type="submit" style={submitBtnStyle}>ENTRAR NO SISTEMA</button>
           </form>
         </div>
       </div>
@@ -190,7 +199,7 @@ export default function App() {
                 <span style={metricValueStyle}>{totalLeads}</span>
               </div>
               <div style={metricCardStyle}>
-                <span style={metricLabelStyle}>TOTAL EM ORÇAMENTOS</span>
+                <span style={metricLabelStyle}>ORÇAMENTOS</span>
                 <span style={metricValueStyle}>R$ {totalValor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}</span>
               </div>
               <div style={metricCardStyle}>
@@ -250,7 +259,7 @@ export default function App() {
               })}
               {filteredLeads.length === 0 && (
                 <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '80px', color: '#71717a' }}>
-                  <p style={{ fontSize: '16px', fontWeight: '500' }}>Você ainda não tem leads. Clique em "+ Novo Lead" para começar.</p>
+                  <p style={{ fontSize: '14px', fontWeight: '500' }}>Nenhum lead encontrado para estes filtros.</p>
                 </div>
               )}
             </div>
@@ -305,7 +314,7 @@ export default function App() {
 
 // --- ESTILOS ---
 const navStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 40px', height: '64px', background: '#fff', borderBottom: '1px solid #e4e4e7', position: 'sticky', top: 0, zIndex: 100 };
-const navTabStyle = { padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer', transition: '0.2s' };
+const navTabStyle = { padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer' };
 const logoutBtnStyle = { background: 'none', border: 'none', color: '#a1a1aa', fontSize: '12px', fontWeight: '500', cursor: 'pointer' };
 const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' };
 const cardLeadStyle = { background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #e4e4e7' };
@@ -317,7 +326,7 @@ const dateBoxStyle = { background: '#fff7ed', padding: '20px', borderRadius: '16
 const dateLabelStyle = { fontSize: '10px', fontWeight: '800', color: '#f97316', display: 'block', marginBottom: '8px' };
 const dateInputStyle = { width: '100%', border: 'none', background: '#fff', fontSize: '15px', fontWeight: '700', outline: 'none', padding: '10px', borderRadius: '8px', boxSizing: 'border-box' };
 const submitBtnStyle = { padding: '18px', background: '#09090b', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', marginTop: '10px' };
-const authFormStyle = { display: 'flex', flexDirection: 'column', gap: '20px', background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #e4e4e7', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' };
+const authFormStyle = { display: 'flex', flexDirection: 'column', gap: '20px', background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #e4e4e7' };
 const metricCardStyle = { flex: 1, background: '#fff', padding: '20px', borderRadius: '20px', border: '1px solid #e4e4e7', display: 'flex', flexDirection: 'column', gap: '5px' };
-const metricLabelStyle = { fontSize: '10px', fontWeight: '800', color: '#a1a1aa', letterSpacing: '0.05em' };
+const metricLabelStyle = { fontSize: '10px', fontWeight: '800', color: '#a1a1aa' };
 const metricValueStyle = { fontSize: '18px', fontWeight: '900', color: '#09090b' };
