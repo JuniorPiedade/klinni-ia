@@ -17,7 +17,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// --- COMPONENTES DE AÇÃO COM HOVER KLINNI ---
+// --- COMPONENTES DE INTERFACE ---
 const ActionButton = ({ onClick, children, hoverColor }) => {
   const [isHovered, setIsHovered] = useState(false);
   return (
@@ -43,7 +43,7 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   
-  // States Form
+  // States Auth & Form
   const [celular, setCelular] = useState('');
   const [password, setPassword] = useState('');
   const [idLeadEditando, setIdLeadEditando] = useState(null);
@@ -68,7 +68,7 @@ export default function App() {
     return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
-  // --- CORES DA ORIGEM (RESTAURADAS) ---
+  // --- ESTILIZAÇÃO DINÂMICA ---
   const getOrigemStyle = (origem) => {
     switch (origem) {
       case 'Facebook': return { bg: '#f0f9ff', color: '#0369a1' };
@@ -89,18 +89,27 @@ export default function App() {
     }
   };
 
+  // --- CÁLCULOS E FORMATAÇÃO ---
   const totalPendente = leads.filter(l => l.status === 'Pendente').reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
   const totalAtendimento = leads.filter(l => l.status === 'Em atendimento').reduce((acc, curr) => acc + (parseFloat(curr.valorOrcamento) || 0), 0);
   const formatarMoeda = (v) => new Intl.NumberFormat('pt-BR', { minimumFractionDigits: 2 }).format(v);
 
+  // --- AÇÕES ---
   const handleSalvarLead = async (e) => {
     e.preventDefault();
     setIsSaving(true);
+    
+    // Lógica High Ticket (Salvador)
+    const idade = nascimentoLead ? new Date().getFullYear() - new Date(nascimentoLead).getFullYear() : 0;
+    const bairrosNobres = ['40140', '41940', '40080', '41810', '41820', '41760'];
+    const categoria = (bairrosNobres.includes(cepLead.substring(0, 5)) && idade >= 20) ? "HIGH TICKET" : "Ticket Médio";
+
     const dados = {
       nome: nomeLead, cep: cepLead, dataNascimento: nascimentoLead,
       origem: origemLead, sexo: sexoLead, valorOrcamento: parseFloat(valorOrcamento) || 0, 
-      status: statusLead, observacoes: obsLead, userId: user.uid, updatedAt: serverTimestamp()
+      status: statusLead, observacoes: obsLead, categoria, userId: user.uid, updatedAt: serverTimestamp()
     };
+    
     try {
       if (idLeadEditando) await updateDoc(doc(db, "leads", idLeadEditando), dados);
       else await addDoc(collection(db, "leads"), { ...dados, createdAt: serverTimestamp() });
@@ -126,19 +135,33 @@ export default function App() {
 
   return (
     <div style={{ minHeight: '100vh', background: '#fafafa', fontFamily: '"Inter", sans-serif' }}>
+      
+      {/* TELA DE LOGIN RESTAURADA */}
       {!user ? (
         <div style={{height:'100vh', display:'flex', alignItems:'center', justifyContent:'center', background:'#fff'}}>
-           <div style={{width:'350px', padding:'50px', textAlign:'center', border:'1px solid #f2f2f2', borderRadius:'32px'}}>
+           <div style={{width:'350px', padding:'50px', textAlign:'center', border:'1px solid #f2f2f2', borderRadius:'32px', boxShadow: '0 20px 50px rgba(0,0,0,0.02)'}}>
             <h1 style={{fontSize:'28px', color:'#111', marginBottom:'35px', fontWeight:'800'}}>KLINNI <span style={{color:'#ff6b00'}}>IA</span></h1>
-            <form onSubmit={async (e) => { e.preventDefault(); const email = `${celular.replace(/\D/g, '')}@klinni.ia`; try { await signInWithEmailAndPassword(auth, email, password); } catch(err){alert("Erro");} }} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
-              <input placeholder="Celular" value={celular} onChange={e=>setCelular(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee'}} />
-              <input type="password" placeholder="Chave" value={password} onChange={e=>setPassword(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee'}} />
-              <button style={{padding:'18px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'14px', fontWeight:'600', cursor:'pointer'}}>ENTRAR</button>
+            
+            <form onSubmit={async (e) => { 
+              e.preventDefault(); 
+              const email = `${celular.replace(/\D/g, '')}@klinni.ia`; 
+              try { await signInWithEmailAndPassword(auth, email, password); } 
+              catch(err){ alert("Chave ou celular incorretos."); } 
+            }} style={{display:'flex', flexDirection:'column', gap:'16px'}}>
+              <input placeholder="Celular" value={celular} onChange={e=>setCelular(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', outline: 'none'}} />
+              <input type="password" placeholder="Chave de Acesso" value={password} onChange={e=>setPassword(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', outline: 'none'}} />
+              <button style={{padding:'18px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'14px', fontWeight:'600', cursor:'pointer', marginTop: '10px'}}>ENTRAR</button>
             </form>
+
+            <div style={{marginTop: '25px', display: 'flex', flexDirection: 'column', gap: '12px'}}>
+              <button onClick={() => alert("Função de cadastro em breve.")} style={{background: 'none', border: 'none', color: '#ff6b00', fontSize: '13px', fontWeight: '700', cursor: 'pointer'}}>CRIAR NOVA CONTA</button>
+              <button onClick={() => alert("Contate o suporte para redefinir sua chave.")} style={{background: 'none', border: 'none', color: '#aaa', fontSize: '12px', fontWeight: '500', cursor: 'pointer'}}>Esqueci minha chave</button>
+            </div>
           </div>
         </div>
       ) : (
         <>
+          {/* HEADER DASHBOARD */}
           <nav style={{display:'flex', justifyContent:'space-between', padding:'20px 60px', background:'rgba(255,255,255,0.8)', backdropFilter: 'blur(10px)', borderBottom:'1px solid #f0f0f0', position:'sticky', top:0, zIndex:100}}>
             <h2 style={{margin:0, color:'#111', fontSize:'20px', fontWeight:'900'}}>KLINNI <span style={{color:'#ff6b00'}}>IA</span></h2>
             <div style={{display:'flex', gap:'35px', alignItems: 'center'}}>
@@ -151,8 +174,9 @@ export default function App() {
           <main style={{padding:'40px 60px'}}>
             {view === 'dashboard' && (
               <>
+                {/* FAROL DE VALORES */}
                 <div style={{display: 'flex', gap: '20px', marginBottom: '40px'}}>
-                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.01)'}}>
+                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center'}}>
                     <div style={{width: '48px', height: '48px', background: '#fff7ed', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#c2410c'}}>
                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M20 12V8H6a2 2 0 0 1-2-2c0-1.1.9-2 2-2h12v4"></path><path d="M4 6v12c0 1.1.9 2 2 2h14v-4"></path><path d="M18 12a2 2 0 0 0-2 2c0 1.1.9 2 2 2h4v-4h-4z"></path></svg>
                     </div>
@@ -161,7 +185,7 @@ export default function App() {
                       <div style={{fontSize: '22px', color: '#1a1a1a', fontWeight: '800'}}>R$ {formatarMoeda(totalPendente)}</div>
                     </div>
                   </div>
-                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center', boxShadow: '0 4px 15px rgba(0,0,0,0.01)'}}>
+                  <div style={{flex: 1, background: 'white', padding: '24px', borderRadius: '24px', border: '1px solid #f0f0f0', display: 'flex', alignItems: 'center'}}>
                     <div style={{width: '48px', height: '48px', background: '#fffbeb', borderRadius: '16px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#b45309'}}>
                       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"></polyline><polyline points="17 6 23 6 23 12"></polyline></svg>
                     </div>
@@ -172,17 +196,20 @@ export default function App() {
                   </div>
                 </div>
 
+                {/* GRID DE LEADS */}
                 <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(320px, 1fr))', gap:'25px'}}>
                   {leads.map(l => {
                     const styleOrigem = getOrigemStyle(l.origem);
                     const styleStatus = getStatusStyle(l.status);
                     return (
                       <div key={l.id} style={{background:'#ffffff', padding:'32px', borderRadius:'24px', position:'relative', boxShadow:'0 4px 20px rgba(0,0,0,0.02)', border:'1px solid #f5f5f5'}}>
+                        
+                        {/* AÇÕES COM HOVER REATIVO */}
                         <div style={{position:'absolute', right:'24px', top:'24px', display:'flex', gap:'8px'}}>
                           <ActionButton onClick={() => iniciarEdicao(l)} hoverColor="#ff6b00">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4L18.5 2.5z"></path></svg>
                           </ActionButton>
-                          <ActionButton onClick={async () => { if(window.confirm("Deseja apagar este lead?")) await deleteDoc(doc(db, "leads", l.id)); }} hoverColor="#ef4444">
+                          <ActionButton onClick={async () => { if(window.confirm("Apagar lead?")) await deleteDoc(doc(db, "leads", l.id)); }} hoverColor="#ef4444">
                             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
                           </ActionButton>
                         </div>
@@ -211,11 +238,12 @@ export default function App() {
               </>
             )}
 
+            {/* FORMULÁRIO DE CADASTRO/EDIÇÃO */}
             {view === 'novoLead' && (
               <div style={{maxWidth:'550px', margin:'0 auto', background:'white', padding:'50px', borderRadius:'32px', border: '1px solid #f5f5f5', boxShadow: '0 20px 40px rgba(0,0,0,0.04)'}}>
                 <h2 style={{marginBottom:'40px', color:'#111', textAlign:'center', fontWeight:'800'}}>{idLeadEditando ? 'Refinar' : 'Novo'} Lead</h2>
                 <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'20px'}}>
-                  <input placeholder="Nome" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', outline:'none'}} />
+                  <input placeholder="Nome Completo" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', outline:'none'}} />
                   <div style={{display:'flex', gap:'20px'}}>
                     <input placeholder="CEP" value={cepLead} onChange={e=>setCepLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', flex:1}} />
                     <input type="date" value={nascimentoLead} onChange={e=>setNascimentoLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', flex:1}} />
@@ -242,6 +270,7 @@ export default function App() {
                       <option value="Feminino">Feminino</option>
                     </select>
                   </div>
+                  <textarea placeholder="Observações..." value={obsLead} onChange={e=>setObsLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #eee', minHeight:'100px', fontFamily:'inherit'}} />
                   <button type="submit" disabled={isSaving} style={{padding:'20px', background:'#1a1a1a', color:'white', border:'none', borderRadius:'16px', fontWeight:'700', cursor:'pointer'}}>
                     {isSaving ? 'PROCESSANDO...' : 'CONFIRMAR'}
                   </button>
