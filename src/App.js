@@ -40,16 +40,14 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   
-  // States Funcionalidades Beta
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   
-  // States Login
-  const [email, setEmail] = useState('');
+  // Login via Celular (tratado como identificador no Firebase Auth)
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [authError, setAuthError] = useState('');
 
-  // States Form
   const [formData, setFormData] = useState({
     nome: '',
     dataManual: '',
@@ -76,10 +74,15 @@ export default function App() {
   const handleLogin = async (e) => {
     e.preventDefault();
     setAuthError('');
+    
+    // Converte o número de celular para formato de e-mail compatível com Firebase Auth interno
+    const phoneEmail = `${phone.replace(/\D/g, '')}@klinni.com.br`;
+    
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      await signInWithEmailAndPassword(auth, phoneEmail, password);
     } catch (err) {
-      setAuthError('Credenciais inválidas.');
+      console.error(err);
+      setAuthError('Celular ou senha inválidos.');
     }
   };
 
@@ -113,23 +116,21 @@ export default function App() {
     }
   };
 
-  // Lógica de Filtros
   const filteredLeads = leads.filter(l => {
     const matchSearch = l.nome.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "Todos" || l.status === statusFilter;
     return matchSearch && matchStatus;
   });
 
-  // Métricas
   const totalLeads = leads.length;
   const totalValor = leads.reduce((acc, l) => acc + (l.valorOrcamento || 0), 0);
   const agendadosCount = leads.filter(l => l.status === "Agendado").length;
 
   if (loading) return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: THEME.bg, color: THEME.textLight }}>
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: THEME.bg }}>
       <div style={{ textAlign: 'center' }}>
         <div style={{ width: '24px', height: '24px', border: '3px solid #e4e4e7', borderTopColor: THEME.primary, borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 10px' }} />
-        <span style={{ fontSize: '14px', fontWeight: '600' }}>Carregando Klinni...</span>
+        <span style={{ fontSize: '14px', fontWeight: '600', color: '#71717a' }}>Carregando Klinni...</span>
       </div>
       <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
     </div>
@@ -141,16 +142,25 @@ export default function App() {
         <div style={{ width: '100%', maxWidth: '400px', padding: '40px' }}>
           <div style={{ textAlign: 'center', marginBottom: '40px' }}>
             <h1 style={{ fontWeight: '900', fontSize: '24px', letterSpacing: '-0.04em' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h1>
-            <p style={{ color: '#71717a', fontSize: '14px', marginTop: '8px' }}>Login Beta</p>
+            <p style={{ color: '#71717a', fontSize: '14px', marginTop: '8px' }}>Acesso com Número de Celular</p>
           </div>
           <form onSubmit={handleLogin} style={authFormStyle}>
-            <div style={inputGroupStyle}><label style={labelStyle}>E-MAIL</label>
-              <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="seu@email.com" required style={inputStyle} />
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>CELULAR (COM DDD)</label>
+              <input 
+                type="tel" 
+                value={phone} 
+                onChange={e => setPhone(e.target.value)} 
+                placeholder="Ex: 71988887777" 
+                required 
+                style={inputStyle} 
+              />
             </div>
-            <div style={inputGroupStyle}><label style={labelStyle}>SENHA</label>
+            <div style={inputGroupStyle}>
+              <label style={labelStyle}>SENHA</label>
               <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••" required style={inputStyle} />
             </div>
-            {authError && <p style={{ color: '#ef4444', fontSize: '12px', textAlign: 'center' }}>{authError}</p>}
+            {authError && <p style={{ color: '#ef4444', fontSize: '12px', textAlign: 'center', fontWeight: '600' }}>{authError}</p>}
             <button type="submit" style={submitBtnStyle}>ENTRAR</button>
           </form>
         </div>
@@ -164,8 +174,8 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
           <h2 style={{ fontWeight: '800', fontSize: '14px' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h2>
           <div style={{ display: 'flex', gap: '8px' }}>
-            <button onClick={() => setView('dashboard')} style={{ ...navTabStyle, background: view === 'dashboard' ? '#f4f4f5' : 'transparent' }}>Dashboard</button>
-            <button onClick={() => setView('novoLead')} style={{ ...navTabStyle, background: view === 'novoLead' ? '#f4f4f5' : 'transparent' }}>+ Novo Lead</button>
+            <button onClick={() => setView('dashboard')} style={{ ...navTabStyle, background: view === 'dashboard' ? '#f4f4f5' : 'transparent', color: view === 'dashboard' ? '#09090b' : '#71717a' }}>Dashboard</button>
+            <button onClick={() => setView('novoLead')} style={{ ...navTabStyle, background: view === 'novoLead' ? '#f4f4f5' : 'transparent', color: view === 'novoLead' ? '#09090b' : '#71717a' }}>+ Novo Lead</button>
           </div>
         </div>
         <button onClick={() => signOut(auth)} style={logoutBtnStyle}>Sair</button>
@@ -174,7 +184,6 @@ export default function App() {
       <main style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
         {view === 'dashboard' ? (
           <div>
-            {/* 4. MINI DASHBOARD */}
             <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
               <div style={metricCardStyle}>
                 <span style={metricLabelStyle}>TOTAL DE LEADS</span>
@@ -190,7 +199,6 @@ export default function App() {
               </div>
             </div>
 
-            {/* 2 & 3. BUSCA E FILTRO */}
             <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
               <input 
                 placeholder="Buscar lead por nome..." 
@@ -218,21 +226,10 @@ export default function App() {
                   <div key={l.id} style={cardLeadStyle}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '16px' }}>
                       <span style={{ fontSize: '10px', fontWeight: '800', color: '#a1a1aa' }}>{l.origem}</span>
-                      {/* 1. ATUALIZAÇÃO DE STATUS NO CARD */}
                       <select 
                         value={l.status} 
                         onChange={(e) => handleUpdateStatus(l.id, e.target.value)}
-                        style={{ 
-                          background: st.bg, 
-                          color: st.text, 
-                          border: 'none', 
-                          borderRadius: '100px', 
-                          fontSize: '11px', 
-                          fontWeight: '700', 
-                          padding: '4px 10px', 
-                          outline: 'none', 
-                          cursor: 'pointer' 
-                        }}
+                        style={{ background: st.bg, color: st.text, border: 'none', borderRadius: '100px', fontSize: '11px', fontWeight: '700', padding: '4px 10px', outline: 'none', cursor: 'pointer' }}
                       >
                         <option value="Pendente">Pendente</option>
                         <option value="Agendado">Agendado</option>
@@ -251,7 +248,6 @@ export default function App() {
                   </div>
                 )
               })}
-              {/* 6. EMPTY STATE */}
               {filteredLeads.length === 0 && (
                 <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '80px', color: '#71717a' }}>
                   <p style={{ fontSize: '16px', fontWeight: '500' }}>Você ainda não tem leads. Clique em "+ Novo Lead" para começar.</p>
@@ -268,16 +264,9 @@ export default function App() {
                   <label style={labelStyle}>NOME COMPLETO</label>
                   <input placeholder="Ex: Lucas Mendes" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={inputStyle} />
                 </div>
-                {/* 8. INPUT DE DATA SIMPLIFICADO */}
                 <div style={dateBoxStyle}>
                   <label style={dateLabelStyle}>AGENDAMENTO</label>
-                  <input 
-                    type="datetime-local" 
-                    value={formData.dataManual} 
-                    onChange={(e) => setFormData({...formData, dataManual: e.target.value})} 
-                    required 
-                    style={dateInputStyle} 
-                  />
+                  <input type="datetime-local" value={formData.dataManual} onChange={(e) => setFormData({...formData, dataManual: e.target.value})} required style={dateInputStyle} />
                 </div>
                 <div style={{ display: 'flex', gap: '15px' }}>
                   <div style={{ ...inputGroupStyle, flex: 1 }}>
@@ -316,7 +305,7 @@ export default function App() {
 
 // --- ESTILOS ---
 const navStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 40px', height: '64px', background: '#fff', borderBottom: '1px solid #e4e4e7', position: 'sticky', top: 0, zIndex: 100 };
-const navTabStyle = { padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer' };
+const navTabStyle = { padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer', transition: '0.2s' };
 const logoutBtnStyle = { background: 'none', border: 'none', color: '#a1a1aa', fontSize: '12px', fontWeight: '500', cursor: 'pointer' };
 const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' };
 const cardLeadStyle = { background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #e4e4e7' };
@@ -328,7 +317,7 @@ const dateBoxStyle = { background: '#fff7ed', padding: '20px', borderRadius: '16
 const dateLabelStyle = { fontSize: '10px', fontWeight: '800', color: '#f97316', display: 'block', marginBottom: '8px' };
 const dateInputStyle = { width: '100%', border: 'none', background: '#fff', fontSize: '15px', fontWeight: '700', outline: 'none', padding: '10px', borderRadius: '8px', boxSizing: 'border-box' };
 const submitBtnStyle = { padding: '18px', background: '#09090b', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', fontSize: '14px', cursor: 'pointer', marginTop: '10px' };
-const authFormStyle = { display: 'flex', flexDirection: 'column', gap: '20px', background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #e4e4e7' };
+const authFormStyle = { display: 'flex', flexDirection: 'column', gap: '20px', background: '#fff', padding: '32px', borderRadius: '24px', border: '1px solid #e4e4e7', boxShadow: '0 4px 12px rgba(0,0,0,0.03)' };
 const metricCardStyle = { flex: 1, background: '#fff', padding: '20px', borderRadius: '20px', border: '1px solid #e4e4e7', display: 'flex', flexDirection: 'column', gap: '5px' };
 const metricLabelStyle = { fontSize: '10px', fontWeight: '800', color: '#a1a1aa', letterSpacing: '0.05em' };
 const metricValueStyle = { fontSize: '18px', fontWeight: '900', color: '#09090b' };
