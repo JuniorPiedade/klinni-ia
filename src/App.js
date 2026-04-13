@@ -1,27 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { initializeApp } from "firebase/app";
-import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signOut, 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber 
-} from "firebase/auth";
-import { 
-  getFirestore, 
-  collection, 
-  addDoc, 
-  query, 
-  where, 
-  onSnapshot, 
-  orderBy, 
-  serverTimestamp, 
-  doc, 
-  updateDoc 
-} from "firebase/firestore";
+import { getAuth, onAuthStateChanged, signOut, signInWithEmailAndPassword } from "firebase/auth";
+import { getFirestore, collection, addDoc, updateDoc, doc, query, where, onSnapshot, orderBy, serverTimestamp } from "firebase/firestore";
 
+// --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
+  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM",
   authDomain: "klinni-ia.firebaseapp.com",
   projectId: "klinni-ia",
   storageBucket: "klinni-ia.firebasestorage.app",
@@ -34,10 +18,13 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 const THEME = {
-  primary: '#f97316',
-  secondary: '#09090b',
-  bg: '#fafafa',
-  font: 'Inter, system-ui, sans-serif'
+  primary: '#ff6b00',
+  secondary: '#1e293b',
+  bg: '#fcfcfd',
+  card: '#ffffff',
+  text: '#334155',
+  textLight: '#94a3b8',
+  fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif'
 };
 
 export default function App() {
@@ -45,160 +32,125 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
-  
-  const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("Todos");
-  
-  const [phone, setPhone] = useState("");
-  const [code, setCode] = useState("");
-  const [confirmationResult, setConfirmationResult] = useState(null);
-  const [step, setStep] = useState("phone"); 
-  const [authLoading, setAuthLoading] = useState(false);
-  const [authError, setAuthError] = useState("");
-
-  const [formData, setFormData] = useState({ nome: '', dataManual: '', origem: 'INSTAGRAM', status: 'Pendente', valor: '' });
+ 
+  // States Form
+  const [nomeLead, setNomeLead] = useState('');
+  const [dataManual, setDataManual] = useState('');
+  const [origemLead, setOrigemLead] = useState('INSTAGRAM');
+  const [valorOrcamento, setValorOrcamento] = useState('');
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => { 
-      setUser(u); 
-      setLoading(false); 
-    });
-    return () => unsub();
+    const unsubscribe = onAuthStateChanged(auth, (u) => { setUser(u); setLoading(false); });
+    return () => unsubscribe();
   }, []);
-
-  // Inicialização segura do Recaptcha
-  useEffect(() => {
-    if (!user && !loading) {
-      const initRecaptcha = () => {
-        if (!window.recaptchaVerifier) {
-          try {
-            window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
-              size: "invisible",
-              callback: () => { console.log("Recaptcha resolvido"); }
-            });
-          } catch (e) {
-            console.error("Erro Recaptcha:", e);
-          }
-        }
-      };
-      
-      // Pequeno delay para garantir que a div #recaptcha-container está no DOM
-      const timer = setTimeout(initRecaptcha, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [user, loading]);
 
   useEffect(() => {
     if (!user) return;
-    try {
-      const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-      return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
-    } catch (e) { console.error("Erro Firestore:", e); }
+    const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+    return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
-  const handleSendCode = async () => {
-    if (!phone.startsWith('+')) { setAuthError("Formato: +5571999999999"); return; }
-    setAuthLoading(true);
-    setAuthError("");
-    try {
-      const verifier = window.recaptchaVerifier;
-      const result = await signInWithPhoneNumber(auth, phone, verifier);
-      setConfirmationResult(result);
-      setStep("code");
-    } catch (error) {
-      setAuthError("Erro ao enviar SMS.");
-      console.error(error);
-      if (window.recaptchaVerifier) window.recaptchaVerifier.render().then(id => window.recaptchaVerifier.reset(id));
-    } finally { setAuthLoading(false); }
+  // Máscara DD/MM às HH:MM
+  const handleDataChange = (e) => {
+    let v = e.target.value.replace(/\D/g, "");
+    if (v.length > 8) v = v.substring(0, 8);
+    let formatted = "";
+    if (v.length > 0) formatted += v.substring(0, 2);
+    if (v.length > 2) formatted += "/" + v.substring(2, 4);
+    if (v.length > 4) formatted += " às " + v.substring(4, 6);
+    if (v.length > 6) formatted += ":" + v.substring(6, 8);
+    setDataManual(formatted);
   };
 
-  const handleConfirmCode = async () => {
-    setAuthLoading(true);
+  const handleSalvarLead = async (e) => {
+    e.preventDefault();
+    setIsSaving(true);
     try {
-      await confirmationResult.confirm(code);
-    } catch (error) {
-      setAuthError("Código inválido.");
-    } finally { setAuthLoading(false); }
+      const [dataParte, horaParte] = dataManual.split(" às ");
+      const [dia, mes] = dataParte.split("/");
+      const [hora, min] = horaParte.split(":");
+      const dataISO = `${new Date().getFullYear()}-${mes}-${dia}T${hora}:${min}:00`;
+
+      await addDoc(collection(db, "leads"), {
+        nome: nomeLead,
+        dataAgendamento: dataISO,
+        origem: origemLead,
+        valorOrcamento: parseFloat(valorOrcamento) || 0,
+        userId: user.uid,
+        createdAt: serverTimestamp()
+      });
+      setNomeLead(''); setDataManual(''); setValorOrcamento('');
+      setView('dashboard');
+    } catch (err) { alert("Erro ao salvar."); }
+    finally { setIsSaving(false); }
   };
 
-  const filteredLeads = Array.isArray(leads) ? leads.filter(l => {
-    const nome = l.nome || "";
-    return nome.toLowerCase().includes(search.toLowerCase()) && (statusFilter === "Todos" || l.status === statusFilter);
-  }) : [];
-
-  if (loading) return <div style={{ padding: 40, textAlign: 'center', fontFamily: THEME.font }}>Iniciando Klinni IA...</div>;
-
-  if (!user) {
-    return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: THEME.bg, fontFamily: THEME.font }}>
-        <div style={{ background: "#fff", padding: "40px", borderRadius: "20px", border: "1px solid #e4e4e7", width: "100%", maxWidth: "360px" }}>
-          <h2 style={{ textAlign: 'center', marginBottom: '24px' }}>KLINNI IA</h2>
-          {step === "phone" ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input placeholder="+55 71 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
-              <button onClick={handleSendCode} disabled={authLoading} style={submitBtnStyle}>{authLoading ? "Enviando..." : "Enviar código"}</button>
-            </div>
-          ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input placeholder="Código SMS" value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
-              <button onClick={handleConfirmCode} disabled={authLoading} style={submitBtnStyle}>Confirmar</button>
-              <button onClick={() => setStep("phone")} style={{ fontSize: '12px', background: 'none', border: 'none', cursor: 'pointer' }}>Voltar</button>
-            </div>
-          )}
-          {authError && <p style={{ color: "red", fontSize: "12px", marginTop: "10px" }}>{authError}</p>}
-          <div id="recaptcha-container"></div>
-        </div>
-      </div>
-    );
-  }
+  if (loading) return null;
 
   return (
-    <div style={{ minHeight: '100vh', background: THEME.bg, fontFamily: THEME.font }}>
-      <nav style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 40px', background: '#fff', borderBottom: '1px solid #e4e4e7' }}>
-        <div style={{ display: 'flex', gap: '20px', alignItems: 'center' }}>
-          <strong>KLINNI IA</strong>
-          <button onClick={() => setView('dashboard')} style={{ border: 'none', background: view === 'dashboard' ? '#f4f4f5' : 'none', padding: '8px 12px', cursor: 'pointer', borderRadius: '6px' }}>Dashboard</button>
-          <button onClick={() => setView('novoLead')} style={{ border: 'none', background: view === 'novoLead' ? '#f4f4f5' : 'none', padding: '8px 12px', cursor: 'pointer', borderRadius: '6px' }}>+ Lead</button>
-        </div>
-        <button onClick={() => signOut(auth)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#71717a' }}>Sair</button>
-      </nav>
+    <div style={{ minHeight: '100vh', background: THEME.bg, color: THEME.text, fontFamily: THEME.fontFamily }}>
+      {user && (
+        <>
+          <nav style={{display:'flex', justifyContent:'space-between', padding:'15px 50px', background:'#fff', borderBottom:'1px solid #f1f5f9', position:'sticky', top:0, zIndex:10}}>
+            <h2 style={{fontWeight:'900', fontSize:'18px'}}>KLINNI <span style={{color:THEME.primary}}>IA</span></h2>
+            <div style={{display:'flex', gap:'20px'}}>
+              <button onClick={()=>setView('dashboard')} style={{background:'none', border:'none', fontWeight:'700', color:view==='dashboard'?THEME.primary:THEME.textLight, cursor:'pointer'}}>DASHBOARD</button>
+              <button onClick={()=>setView('novoLead')} style={{background:'none', border:'none', fontWeight:'700', color:view==='novoLead'?THEME.primary:THEME.textLight, cursor:'pointer'}}>+ NOVO LEAD</button>
+            </div>
+          </nav>
 
-      <main style={{ padding: '40px', maxWidth: '1000px', margin: '0 auto' }}>
-        {view === 'dashboard' ? (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '20px', marginBottom: '30px' }}>
-              <div style={cardLeadStyle}>Leads: {leads.length}</div>
-              <div style={cardLeadStyle}>R$: {leads.reduce((acc, l) => acc + (Number(l.valorOrcamento) || 0), 0).toLocaleString()}</div>
-              <div style={cardLeadStyle}>Agendados: {leads.filter(l => l.status === 'Agendado').length}</div>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '20px' }}>
-              {filteredLeads.map(l => (
-                <div key={l.id} style={cardLeadStyle}>
-                  <strong>{l.nome}</strong>
-                  <p style={{ fontSize: '13px', color: THEME.primary }}>{l.status}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        ) : (
-          <div style={cardLeadStyle}>
-             <h3>Novo Lead</h3>
-             <form onSubmit={(e) => {
-               e.preventDefault();
-               handleSalvarLead(e);
-             }} style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-               <input placeholder="Nome" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={inputStyle} />
-               <input type="number" placeholder="Valor" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} style={inputStyle} />
-               <button type="submit" disabled={isSaving} style={submitBtnStyle}>Salvar</button>
-             </form>
-          </div>
-        )}
-      </main>
+          <main style={{padding:'40px 50px', maxWidth:'1200px', margin:'0 auto'}}>
+            {view === 'dashboard' ? (
+              <div style={{display:'grid', gridTemplateColumns:'repeat(auto-fill, minmax(280px, 1fr))', gap:'20px'}}>
+                {leads.length > 0 ? leads.map(l => (
+                  <div key={l.id} style={{background:'#fff', padding:'25px', borderRadius:'24px', border:'1px solid #f1f5f9', boxShadow:'0 10px 30px rgba(0,0,0,0.01)'}}>
+                    <div style={{fontSize:'9px', fontWeight:'900', color:THEME.primary, marginBottom:'5px'}}>{l.origem}</div>
+                    <h4 style={{margin:'0 0 10px 0', fontSize:'17px', fontWeight:'700'}}>{l.nome}</h4>
+                    <div style={{fontSize:'12px', color:'#3b82f6', fontWeight:'700', marginBottom:'15px'}}>
+                      🗓️ {new Date(l.dataAgendamento).toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})} às {new Date(l.dataAgendamento).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}
+                    </div>
+                    <div style={{borderTop:'1px solid #fcfcfd', paddingTop:'10px', display:'flex', justifyContent:'space-between'}}>
+                      <span style={{fontSize:'10px', color:THEME.textLight, fontWeight:'600'}}>VALOR</span>
+                      <span style={{fontSize:'15px', fontWeight:'800'}}>R$ {l.valorOrcamento.toLocaleString('pt-BR', {minimumFractionDigits:2})}</span>
+                    </div>
+                  </div>
+                )) : (
+                  <div style={{gridColumn:'1/-1', textAlign:'center', color:THEME.textLight, marginTop:'50px'}}>Nenhum lead encontrado.</div>
+                )}
+              </div>
+            ) : (
+              <div style={{maxWidth:'500px', margin:'0 auto', background:'#fff', padding:'40px', borderRadius:'30px', boxShadow:'0 20px 50px rgba(0,0,0,0.03)'}}>
+                <h2 style={{textAlign:'center', marginBottom:'30px', fontWeight:'900'}}>Novo Lead</h2>
+                <form onSubmit={handleSalvarLead} style={{display:'flex', flexDirection:'column', gap:'20px'}}>
+                  <div style={{display:'flex', flexDirection:'column', gap:'6px'}}>
+                    <label style={{fontSize:'11px', fontWeight:'800', color:THEME.textLight}}>NOME</label>
+                    <input placeholder="Nome do cliente" value={nomeLead} onChange={e=>setNomeLead(e.target.value)} required style={{padding:'16px', borderRadius:'14px', border:'1px solid #f1f5f9', background:'#fcfcfd', outline:'none'}} />
+                  </div>
+                  <div style={{background:'#fff7ed', padding:'20px', borderRadius:'20px', border:'1px solid #ffe8d6'}}>
+                    <label style={{fontSize:'10px', fontWeight:'900', color:THEME.primary, display:'block', marginBottom:'8px'}}>AGENDAMENTO (DIA / MÊS / HORA)</label>
+                    <input placeholder="Ex: 12/04 às 14:30" value={dataManual} onChange={handleDataChange} required style={{width:'100%', padding:'10px', border:'none', background:'#fff', fontSize:'16px', fontWeight:'700', outline:'none'}} />
+                  </div>
+                  <div style={{display:'flex', flexDirection:'column', gap:'6px'}}>
+                    <label style={{fontSize:'11px', fontWeight:'800', color:THEME.textLight}}>ORIGEM DO LEAD</label>
+                    <select value={origemLead} onChange={e=>setOrigemLead(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #f1f5f9', background:'#fcfcfd', outline:'none', cursor:'pointer'}}>
+                      <option value="INSTAGRAM">INSTAGRAM</option>
+                      <option value="FACEBOOK">FACEBOOK</option>
+                      <option value="SITE">SITE</option>
+                      <option value="OUTROS">OUTROS</option>
+                    </select>
+                  </div>
+                  <div style={{display:'flex', flexDirection:'column', gap:'6px'}}>
+                    <label style={{fontSize:'11px', fontWeight:'800', color:THEME.textLight}}>VALOR ESTIMADO (R$)</label>
+                    <input type="number" step="0.01" placeholder="0,00" value={valorOrcamento} onChange={e=>setValorOrcamento(e.target.value)} style={{padding:'16px', borderRadius:'14px', border:'1px solid #f1f5f9', background:'#fcfcfd', outline:'none'}} />
+                  </div>
+                  <button type="submit" disabled={isSaving} style={{padding:'20px', background:THEME.secondary, color:'#fff', border:'none', borderRadius:'16px', fontWeight:'800', cursor:'pointer'}}>{isSaving ? 'SALVANDO...' : 'CADASTRAR LEAD'}</button>
+                </form>
+              </div>
+            )}
+          </main>
+        </>
+      )}
     </div>
   );
 }
-
-const inputStyle = { padding: '12px', borderRadius: '8px', border: '1px solid #e4e4e7', width: '100%', boxSizing: 'border-box' };
-const submitBtnStyle = { padding: '12px', background: '#09090b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' };
-const cardLeadStyle = { background: '#fff', padding: '20px', borderRadius: '12px', border: '1px solid #e4e4e7' };
