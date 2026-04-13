@@ -15,12 +15,10 @@ import {
   where, 
   onSnapshot, 
   orderBy, 
-  serverTimestamp, 
-  doc, 
-  updateDoc 
+  serverTimestamp 
 } from "firebase/firestore";
 
-// --- CONFIGURAÇÃO FIREBASE ---
+// --- FIREBASE CONFIG ---
 const firebaseConfig = {
   apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
   authDomain: "klinni-ia.firebaseapp.com",
@@ -34,6 +32,7 @@ const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
+// --- THEME ---
 const THEME = {
   primary: '#f97316',
   secondary: '#09090b',
@@ -44,18 +43,24 @@ const THEME = {
 };
 
 export default function App() {
+
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
-  
+
+  // AUTH
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
-  const [step, setStep] = useState("phone"); 
+  const [step, setStep] = useState("phone");
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
+  // LEAD FORM (mínimo beta)
+  const [nome, setNome] = useState("");
+  const [valor, setValor] = useState("");
+
+  // --- AUTH LISTENER ---
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => { 
       setUser(u); 
@@ -64,7 +69,7 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // ✅ FIX RECAPTCHA SEGURO
+  // --- RECAPTCHA FIX ---
   useEffect(() => {
     if (!user && step === "phone") {
       const timer = setTimeout(() => {
@@ -74,26 +79,50 @@ export default function App() {
             if (!container) return;
 
             window.recaptchaVerifier = new RecaptchaVerifier(auth, container, {
-              size: "invisible",
-              callback: () => { console.log("Recaptcha verificado"); }
+              size: "invisible"
             });
           } catch (e) {
-            console.error("Erro ao instanciar Recaptcha:", e);
+            console.error("Erro recaptcha:", e);
           }
         }
       }, 500);
+
       return () => clearTimeout(timer);
     }
   }, [user, step]);
 
+  // --- CLEANUP RECAPTCHA ---
+  useEffect(() => {
+    return () => {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    };
+  }, []);
+
+  // --- FIRESTORE ---
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-    return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+
+    const q = query(
+      collection(db, "leads"), 
+      where("userId", "==", user.uid), 
+      orderBy("createdAt", "desc")
+    );
+
+    return onSnapshot(q, (s) => {
+      setLeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+
   }, [user]);
 
+  // --- SEND CODE ---
   const handleSendCode = async () => {
-    if (!phone.startsWith('+')) {
+
+    const cleanPhone = phone.replace(/\s|-/g, '');
+
+    if (!cleanPhone.startsWith('+')) {
       setAuthError("Use o formato: +5571999999999");
       return;
     }
@@ -107,82 +136,141 @@ export default function App() {
     setAuthError("");
 
     try {
-      const result = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
+      const result = await signInWithPhoneNumber(
+        auth,
+        cleanPhone,
+        window.recaptchaVerifier
+      );
+
       setConfirmationResult(result);
       setStep("code");
+      setAuthError("Código enviado via SMS 📩");
+
     } catch (error) {
       console.error(error);
-      setAuthError("Erro ao enviar SMS. Tente novamente.");
-      // ✅ RESET DO RECAPTCHA EM CASO DE ERRO
+
+      setAuthError("Erro ao enviar SMS.");
+
+      // RESET SEGURO
       if (window.recaptchaVerifier) {
-        window.recaptchaVerifier.render().then(widgetId => {
-          auth.tenantId ? window.recaptchaVerifier.reset(widgetId) : window.recaptchaVerifier.reset();
-        });
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
       }
-    } finally {
-      setAuthLoading(false);
     }
+
+    setAuthLoading(false);
   };
 
+  // --- CONFIRM CODE ---
   const handleConfirmCode = async () => {
-    if (!confirmationResult) return;
+
+    if (!confirmationResult) {
+      setAuthError("Solicite o código primeiro.");
+      return;
+    }
+
     setAuthLoading(true);
     setAuthError("");
+
     try {
       await confirmationResult.confirm(code);
-      // Sucesso dispara o onAuthStateChanged automaticamente
     } catch (error) {
+      console.error(error);
       setAuthError("Código inválido ou expirado.");
-    } finally {
-      setAuthLoading(false);
     }
+
+    setAuthLoading(false);
   };
 
-  if (loading) return <div style={{ padding: 40, fontFamily: THEME.font }}>Iniciando Klinni IA...</div>;
+  // --- CREATE LEAD ---
+  const handleCreateLead = async () => {
+    if (!nome) return;
 
+    await addDoc(collection(db, "leads"), {
+      nome,
+      valorOrcamento: parseFloat(valor) || 0,
+      userId: user.uid,
+      createdAt: serverTimestamp()
+    });
+
+    setNome("");
+    setValor("");
+  };
+
+  if (loading) return <div style={{ padding: 40 }}>Carregando...</div>;
+
+  // --- LOGIN UI ---
   if (!user) {
     return (
-      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: THEME.bg, fontFamily: THEME.font }}>
-        <div style={{ background: "#fff", padding: "40px", borderRadius: "24px", border: `1px solid ${THEME.border}`, width: "360px" }}>
-          <h2 style={{ textAlign: 'center', marginBottom: '20px' }}>KLINNI IA</h2>
+      <div style={{ minHeight: "100vh", display: "flex", justifyContent: "center", alignItems: "center", background: THEME.bg }}>
+        <div style={{ background: "#fff", padding: "40px", borderRadius: "20px", width: "320px" }}>
+
+          <h2 style={{ textAlign: 'center' }}>KLINNI IA</h2>
+
           {step === "phone" ? (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input placeholder="+55 71 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
-              <button onClick={handleSendCode} disabled={authLoading} style={buttonStyle}>{authLoading ? "Enviando..." : "Enviar Código"}</button>
-            </div>
+            <>
+              <input placeholder="+55 71 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle}/>
+              <button onClick={handleSendCode} style={buttonStyle}>
+                {authLoading ? "Enviando..." : "Enviar Código"}
+              </button>
+            </>
           ) : (
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input placeholder="Código de 6 dígitos" value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle} />
-              <button onClick={handleConfirmCode} disabled={authLoading} style={{...buttonStyle, background: THEME.primary}}>Confirmar</button>
-              <button onClick={() => setStep("phone")} style={{ background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer' }}>Voltar</button>
-            </div>
+            <>
+              <input placeholder="Código" value={code} onChange={(e) => setCode(e.target.value)} style={inputStyle}/>
+              <button onClick={handleConfirmCode} style={{...buttonStyle, background: THEME.primary}}>
+                Confirmar
+              </button>
+            </>
           )}
-          {authError && <p style={{ color: 'red', fontSize: '12px', marginTop: '10px' }}>{authError}</p>}
+
+          {authError && <p style={{ color: 'red', fontSize: 12 }}>{authError}</p>}
+
           <div id="recaptcha-container"></div>
         </div>
       </div>
     );
   }
 
+  // --- DASHBOARD ---
   return (
-    <div style={{ minHeight: '100vh', background: THEME.bg, fontFamily: THEME.font }}>
-      <nav style={{ display: 'flex', justifyContent: 'space-between', padding: '15px 40px', background: '#fff', borderBottom: `1px solid ${THEME.border}` }}>
-        <strong>KLINNI IA</strong>
-        <button onClick={() => signOut(auth)} style={{ border: 'none', background: 'none', cursor: 'pointer', color: '#71717a' }}>Sair</button>
-      </nav>
-      <main style={{ padding: '40px' }}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-          {leads.map(l => (
-            <div key={l.id} style={{ background: '#fff', padding: '20px', borderRadius: '15px', border: `1px solid ${THEME.border}` }}>
-              <h4>{l.nome}</h4>
-              <p style={{ fontWeight: 'bold' }}>R$ {(l.valorOrcamento || 0).toLocaleString('pt-BR')}</p>
-            </div>
-          ))}
-        </div>
-      </main>
+    <div style={{ padding: 40, fontFamily: THEME.font }}>
+
+      <button onClick={() => signOut(auth)}>Sair</button>
+
+      <h2>Leads</h2>
+
+      <input placeholder="Nome" value={nome} onChange={(e) => setNome(e.target.value)} style={inputStyle}/>
+      <input placeholder="Valor" value={valor} onChange={(e) => setValor(e.target.value)} style={inputStyle}/>
+      <button onClick={handleCreateLead} style={buttonStyle}>Adicionar Lead</button>
+
+      <div style={{ marginTop: 20 }}>
+        {leads.map(l => (
+          <div key={l.id} style={{ border: '1px solid #eee', padding: 10, marginBottom: 10 }}>
+            <strong>{l.nome}</strong>
+            <p>R$ {(l.valorOrcamento || 0).toLocaleString('pt-BR')}</p>
+          </div>
+        ))}
+      </div>
+
     </div>
   );
 }
 
-const inputStyle = { padding: '14px', borderRadius: '12px', border: '1px solid #e4e4e7', width: '100%', boxSizing: 'border-box' };
-const buttonStyle = { padding: '14px', background: '#09090b', color: '#fff', border: 'none', borderRadius: '12px', fontWeight: 'bold', cursor: 'pointer' };
+const inputStyle = {
+  width: '100%',
+  padding: '12px',
+  marginTop: '10px',
+  borderRadius: '8px',
+  border: '1px solid #ddd'
+};
+
+const buttonStyle = {
+  width: '100%',
+  padding: '12px',
+  marginTop: '10px',
+  background: '#09090b',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '8px',
+  cursor: 'pointer'
+};
