@@ -45,10 +45,10 @@ const THEME = {
 };
 
 const STATUS_THEME = {
-  'Pendente': { bg: '#f4f4f5', text: '#71717a', dot: '#a1a1aa' },
-  'Agendado': { bg: '#eff6ff', text: '#1e40af', dot: '#3b82f6' },
-  'Em tratamento': { bg: '#fff7ed', text: '#9a3412', dot: '#f97316' },
-  'Não qualificado': { bg: '#fef2f2', text: '#991b1b', dot: '#ef4444' }
+  'Pendente': { bg: '#f4f4f5', text: '#71717a' },
+  'Agendado': { bg: '#eff6ff', text: '#1e40af' },
+  'Em tratamento': { bg: '#fff7ed', text: '#9a3412' },
+  'Não qualificado': { bg: '#fef2f2', text: '#991b1b' }
 };
 
 export default function App() {
@@ -57,19 +57,16 @@ export default function App() {
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   
-  // States Funcionalidades Beta
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
   
-  // States Autenticação SMS
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
-  const [step, setStep] = useState("phone"); // "phone" ou "code"
+  const [step, setStep] = useState("phone"); 
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
 
-  // States Form Lead
   const [formData, setFormData] = useState({
     nome: '',
     dataManual: '',
@@ -79,7 +76,6 @@ export default function App() {
   });
   const [isSaving, setIsSaving] = useState(false);
 
-  // Monitorar Auth
   useEffect(() => {
     const unsub = onAuthStateChanged(auth, (u) => { 
       setUser(u); 
@@ -88,40 +84,48 @@ export default function App() {
     return () => unsub();
   }, []);
 
-  // Configurar Recaptcha
+  // Correção no Recaptcha para evitar múltiplas instâncias
   useEffect(() => {
-    if (!window.recaptchaVerifier && !user) {
+    if (!user && !window.recaptchaVerifier) {
       window.recaptchaVerifier = new RecaptchaVerifier(auth, "recaptcha-container", {
         size: "invisible"
       });
     }
+    return () => {
+      if (window.recaptchaVerifier) {
+        window.recaptchaVerifier.clear();
+        window.recaptchaVerifier = null;
+      }
+    };
   }, [user]);
 
-  // Firestore Snapshot
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+    const q = query(
+      collection(db, "leads"), 
+      where("userId", "==", user.uid), 
+      orderBy("createdAt", "desc")
+    );
     return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
   }, [user]);
 
-  // --- FUNÇÕES DE AUTENTICAÇÃO ---
   const handleSendCode = async () => {
     if (!phone.startsWith('+')) {
-      setAuthError("Use o formato internacional: +5571999999999");
+      setAuthError("Use o formato: +5571999999999");
       return;
     }
     setAuthLoading(true);
     setAuthError("");
     try {
-      const appVerifier = window.recaptchaVerifier;
-      const result = await signInWithPhoneNumber(auth, phone, appVerifier);
+      const result = await signInWithPhoneNumber(auth, phone, window.recaptchaVerifier);
       setConfirmationResult(result);
       setStep("code");
     } catch (error) {
+      setAuthError("Erro ao enviar SMS. Verifique o número.");
       console.error(error);
-      setAuthError("Erro ao enviar código. Verifique o número e tente novamente.");
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
 
   const handleConfirmCode = async () => {
@@ -130,23 +134,24 @@ export default function App() {
     try {
       await confirmationResult.confirm(code);
     } catch (error) {
+      setAuthError("Código inválido.");
       console.error(error);
-      setAuthError("Código inválido ou expirado.");
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
 
-  // --- FUNÇÕES DE LEADS ---
   const handleUpdateStatus = async (id, newStatus) => {
     try {
       await updateDoc(doc(db, "leads", id), { status: newStatus });
     } catch (e) {
-      console.error("Erro ao atualizar status", e);
+      console.error("Erro ao atualizar", e);
     }
   };
 
   const handleSalvarLead = async (e) => {
     e.preventDefault();
+    if (!user) return;
     setIsSaving(true);
     try {
       await addDoc(collection(db, "leads"), {
@@ -161,15 +166,14 @@ export default function App() {
       setFormData({ nome: '', dataManual: '', origem: 'INSTAGRAM', status: 'Pendente', valor: '' });
       setView('dashboard');
     } catch (err) { 
-      console.error("Erro ao salvar lead:", err); 
+      console.error(err); 
     } finally { 
       setIsSaving(false); 
     }
   };
 
-  // --- LÓGICA DE FILTROS ---
   const filteredLeads = leads.filter(l => {
-    const matchSearch = l.nome.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = l.nome?.toLowerCase().includes(search.toLowerCase());
     const matchStatus = statusFilter === "Todos" || l.status === statusFilter;
     return matchSearch && matchStatus;
   });
@@ -178,126 +182,44 @@ export default function App() {
   const totalValor = leads.reduce((acc, l) => acc + (l.valorOrcamento || 0), 0);
   const agendadosCount = leads.filter(l => l.status === "Agendado").length;
 
-  if (loading) return <div style={{ padding: 40, fontFamily: THEME.font }}>Carregando...</div>;
+  if (loading) return <div style={{ padding: 40, fontFamily: THEME.font }}>Carregando Klinni IA...</div>;
 
-  // --- INTERFACE DE LOGIN (PHONE OTP) ---
   if (!user) {
     return (
-      <div style={{
-        minHeight: "100vh",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        background: THEME.bg,
-        fontFamily: THEME.font,
-        padding: "20px"
-      }}>
-        <div style={{
-          background: "#fff",
-          padding: "40px",
-          borderRadius: "24px",
-          border: "1px solid #e4e4e7",
-          width: "100%",
-          maxWidth: "380px",
-          boxShadow: "0 4px 12px rgba(0,0,0,0.03)"
-        }}>
+      <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: THEME.bg, fontFamily: THEME.font }}>
+        <div style={{ background: "#fff", padding: "40px", borderRadius: "24px", border: "1px solid #e4e4e7", width: "100%", maxWidth: "380px" }}>
           <div style={{ textAlign: 'center', marginBottom: '32px' }}>
-            <h1 style={{ fontWeight: '900', fontSize: '24px', letterSpacing: '-0.04em', margin: 0 }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h1>
-            <p style={{ color: '#71717a', fontSize: '14px', marginTop: '8px' }}>Acesso via SMS</p>
+            <h1 style={{ fontWeight: '900', fontSize: '24px' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h1>
           </div>
 
           {step === "phone" ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '700', color: '#71717a' }}>NÚMERO DO CELULAR</label>
-              <input
-                placeholder="+55 71 99999-9999"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                style={{ 
-                  padding: "14px", 
-                  borderRadius: "12px", 
-                  border: "1px solid #e4e4e7", 
-                  background: "#fcfcfd",
-                  fontSize: "15px",
-                  outline: "none"
-                }}
-              />
-              <button 
-                onClick={handleSendCode} 
-                disabled={authLoading} 
-                style={{ 
-                  padding: '16px', 
-                  background: THEME.secondary, 
-                  color: '#fff', 
-                  border: 'none', 
-                  borderRadius: '12px', 
-                  fontWeight: '700', 
-                  cursor: 'pointer',
-                  marginTop: '8px'
-                }}
-              >
+              <input placeholder="+55 71 99999-9999" value={phone} onChange={(e) => setPhone(e.target.value)} style={inputStyle} />
+              <button onClick={handleSendCode} disabled={authLoading} style={submitBtnStyle}>
                 {authLoading ? "Enviando..." : "Enviar código"}
               </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <label style={{ fontSize: '11px', fontWeight: '700', color: '#71717a' }}>CÓDIGO DE VERIFICAÇÃO</label>
-              <input
-                placeholder="000000"
-                value={code}
-                onChange={(e) => setCode(e.target.value)}
-                style={{ 
-                  padding: "14px", 
-                  borderRadius: "12px", 
-                  border: "1px solid #e4e4e7", 
-                  background: "#fcfcfd",
-                  fontSize: "18px",
-                  textAlign: "center",
-                  letterSpacing: "4px",
-                  outline: "none"
-                }}
-              />
-              <button 
-                onClick={handleConfirmCode} 
-                disabled={authLoading} 
-                style={{ 
-                  padding: '16px', 
-                  background: THEME.primary, 
-                  color: '#fff', 
-                  border: 'none', 
-                  borderRadius: '12px', 
-                  fontWeight: '700', 
-                  cursor: 'pointer',
-                  marginTop: '8px'
-                }}
-              >
+              <input placeholder="Código de 6 dígitos" value={code} onChange={(e) => setCode(e.target.value)} style={{ ...inputStyle, textAlign: 'center', letterSpacing: '4px' }} />
+              <button onClick={handleConfirmCode} disabled={authLoading} style={{ ...submitBtnStyle, background: THEME.primary }}>
                 {authLoading ? "Verificando..." : "Confirmar código"}
               </button>
-              <button 
-                onClick={() => setStep("phone")} 
-                style={{ background: 'none', border: 'none', color: '#71717a', fontSize: '12px', cursor: 'pointer', marginTop: '8px' }}
-              >
-                Voltar para alterar número
-              </button>
+              <button onClick={() => setStep("phone")} style={{ background: 'none', border: 'none', color: '#71717a', fontSize: '12px', cursor: 'pointer' }}>Voltar</button>
             </div>
           )}
-
-          {authError && (
-            <p style={{ color: "#ef4444", marginTop: "16px", fontSize: "13px", textAlign: "center", fontWeight: "600" }}>{authError}</p>
-          )}
-
+          {authError && <p style={{ color: "red", fontSize: "12px", textAlign: "center", marginTop: "10px" }}>{authError}</p>}
           <div id="recaptcha-container"></div>
         </div>
       </div>
     );
   }
 
-  // --- DASHBOARD PRINCIPAL ---
   return (
-    <div style={{ minHeight: '100vh', background: THEME.bg, color: THEME.text, fontFamily: THEME.font }}>
+    <div style={{ minHeight: '100vh', background: THEME.bg, fontFamily: THEME.font }}>
       <nav style={navStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '40px' }}>
-          <h2 style={{ fontWeight: '800', fontSize: '14px' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h2>
+        <div style={{ display: 'flex', gap: '40px', alignItems: 'center' }}>
+          <h2 style={{ fontWeight: '800', fontSize: '14px' }}>KLINNI IA</h2>
           <div style={{ display: 'flex', gap: '8px' }}>
             <button onClick={() => setView('dashboard')} style={{ ...navTabStyle, background: view === 'dashboard' ? '#f4f4f5' : 'transparent' }}>Dashboard</button>
             <button onClick={() => setView('novoLead')} style={{ ...navTabStyle, background: view === 'novoLead' ? '#f4f4f5' : 'transparent' }}>+ Novo Lead</button>
@@ -310,72 +232,45 @@ export default function App() {
         {view === 'dashboard' ? (
           <div>
             <div style={{ display: 'flex', gap: '20px', marginBottom: '40px' }}>
-              <div style={metricCardStyle}><span style={metricLabelStyle}>TOTAL DE LEADS</span><span style={metricValueStyle}>{totalLeads}</span></div>
-              <div style={metricCardStyle}><span style={metricLabelStyle}>TOTAL EM R$</span><span style={metricValueStyle}>R$ {totalValor.toLocaleString('pt-BR')}</span></div>
+              <div style={metricCardStyle}><span style={metricLabelStyle}>LEADS</span><span style={metricValueStyle}>{totalLeads}</span></div>
+              <div style={metricCardStyle}><span style={metricLabelStyle}>TOTAL</span><span style={metricValueStyle}>R$ {totalValor.toLocaleString('pt-BR')}</span></div>
               <div style={metricCardStyle}><span style={metricLabelStyle}>AGENDADOS</span><span style={metricValueStyle}>{agendadosCount}</span></div>
             </div>
 
             <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
-              <input placeholder="Buscar lead..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2 }} />
+              <input placeholder="Buscar..." value={search} onChange={(e) => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2 }} />
               <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
                 <option value="Todos">Todos</option>
                 <option value="Pendente">Pendente</option>
                 <option value="Agendado">Agendado</option>
-                <option value="Em tratamento">Em tratamento</option>
-                <option value="Não qualificado">Não qualificado</option>
               </select>
             </div>
             
             <div style={gridStyle}>
-              {filteredLeads.map(l => {
-                const st = STATUS_THEME[l.status] || STATUS_THEME['Pendente'];
-                return (
-                  <div key={l.id} style={cardLeadStyle}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
-                      <span style={{ fontSize: '10px', fontWeight: '800', color: '#a1a1aa' }}>{l.origem}</span>
-                      <select 
-                        value={l.status} 
-                        onChange={(e) => handleUpdateStatus(l.id, e.target.value)}
-                        style={{ background: st.bg, color: st.text, border: 'none', borderRadius: '100px', fontSize: '11px', fontWeight: '700', padding: '4px 10px' }}
-                      >
-                        <option value="Pendente">Pendente</option>
-                        <option value="Agendado">Agendado</option>
-                        <option value="Em tratamento">Em tratamento</option>
-                        <option value="Não qualificado">Não qualificado</option>
-                      </select>
-                    </div>
-                    <h4 style={{ margin: '0 0 8px 0', fontSize: '17px' }}>{l.nome}</h4>
-                    <div style={{ fontSize: '13px', color: '#3b82f6', fontWeight: '600', marginBottom: '20px' }}>
-                      🗓️ {l.dataAgendamento ? new Date(l.dataAgendamento).toLocaleString('pt-BR') : 'Sem data'}
-                    </div>
-                    <div style={{ borderTop: '1px solid #f4f4f5', paddingTop: '16px', display: 'flex', justifyContent: 'space-between' }}>
-                      <span style={{ fontSize: '10px', color: '#a1a1aa' }}>VALOR</span>
-                      <span style={{ fontSize: '16px', fontWeight: '800' }}>R$ {l.valorOrcamento?.toLocaleString('pt-BR')}</span>
-                    </div>
+              {filteredLeads.map(l => (
+                <div key={l.id} style={cardLeadStyle}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '16px' }}>
+                    <span style={{ fontSize: '10px', fontWeight: '800' }}>{l.origem}</span>
+                    <select value={l.status} onChange={(e) => handleUpdateStatus(l.id, e.target.value)} style={{ fontSize: '11px', borderRadius: '10px', padding: '2px 8px' }}>
+                      <option value="Pendente">Pendente</option>
+                      <option value="Agendado">Agendado</option>
+                      <option value="Em tratamento">Em tratamento</option>
+                      <option value="Não qualificado">Não qualificado</option>
+                    </select>
                   </div>
-                )
-              })}
-              {filteredLeads.length === 0 && (
-                <div style={{ gridColumn: '1/-1', textAlign: 'center', padding: '40px' }}>
-                  Você ainda não tem leads. Clique em '+ Novo Lead' para começar.
+                  <h4 style={{ margin: '0 0 8px 0' }}>{l.nome}</h4>
+                  <p style={{ fontSize: '12px', color: '#3b82f6' }}>{l.dataAgendamento ? new Date(l.dataAgendamento).toLocaleString('pt-BR') : 'Sem data'}</p>
                 </div>
-              )}
+              ))}
             </div>
           </div>
         ) : (
-          <div style={{ maxWidth: '480px', margin: '0 auto' }}>
+          <div style={{ maxWidth: '400px', margin: '0 auto' }}>
             <div style={cardFormStyle}>
-              <h2 style={{ fontSize: '20px', marginBottom: '32px' }}>Novo Registro</h2>
-              <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-                <input placeholder="Nome completo" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={inputStyle} />
-                <input type="datetime-local" value={formData.dataManual} onChange={(e) => setFormData({...formData, dataManual: e.target.value})} style={inputStyle} />
-                <select value={formData.status} onChange={e => setFormData({...formData, status: e.target.value})} style={inputStyle}>
-                  <option value="Pendente">Pendente</option>
-                  <option value="Agendado">Agendado</option>
-                  <option value="Em tratamento">Em tratamento</option>
-                  <option value="Não qualificado">Não qualificado</option>
-                </select>
-                <input type="number" placeholder="Valor orçamentário" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} style={inputStyle} />
+              <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
+                <input placeholder="Nome" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={inputStyle} />
+                <input type="datetime-local" value={formData.dataManual} onChange={e => setFormData({...formData, dataManual: e.target.value})} style={inputStyle} />
+                <input type="number" placeholder="Valor" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} style={inputStyle} />
                 <button type="submit" disabled={isSaving} style={submitBtnStyle}>{isSaving ? 'Salvando...' : 'Criar Lead'}</button>
               </form>
             </div>
@@ -386,15 +281,14 @@ export default function App() {
   );
 }
 
-// --- ESTILOS ---
-const navStyle = { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0 40px', height: '64px', background: '#fff', borderBottom: '1px solid #e4e4e7', position: 'sticky', top: 0, zIndex: 100 };
-const navTabStyle = { padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: '600', fontSize: '13px', cursor: 'pointer' };
-const logoutBtnStyle = { background: 'none', border: 'none', color: '#a1a1aa', fontSize: '12px', cursor: 'pointer' };
+const navStyle = { display: 'flex', justifyContent: 'space-between', padding: '0 40px', height: '64px', alignItems: 'center', background: '#fff', borderBottom: '1px solid #e4e4e7' };
+const navTabStyle = { padding: '8px 16px', borderRadius: '8px', border: 'none', fontWeight: '600', cursor: 'pointer' };
+const logoutBtnStyle = { background: 'none', border: 'none', color: '#a1a1aa', cursor: 'pointer' };
 const gridStyle = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '24px' };
-const cardLeadStyle = { background: '#fff', padding: '24px', borderRadius: '24px', border: '1px solid #e4e4e7' };
-const cardFormStyle = { background: '#fff', padding: '40px', borderRadius: '24px', border: '1px solid #e4e4e7' };
-const inputStyle = { padding: '14px', borderRadius: '12px', border: '1px solid #e4e4e7', background: '#fcfcfd', fontSize: '14px', outline: 'none', width: '100%', boxSizing: 'border-box' };
-const submitBtnStyle = { padding: '18px', background: THEME.secondary, color: '#fff', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer' };
-const metricCardStyle = { flex: 1, background: '#fff', padding: '20px', borderRadius: '20px', border: '1px solid #e4e4e7', display: 'flex', flexDirection: 'column' };
+const cardLeadStyle = { background: '#fff', padding: '24px', borderRadius: '20px', border: '1px solid #e4e4e7' };
+const cardFormStyle = { background: '#fff', padding: '30px', borderRadius: '20px', border: '1px solid #e4e4e7' };
+const inputStyle = { padding: '12px', borderRadius: '10px', border: '1px solid #e4e4e7', width: '100%', boxSizing: 'border-box' };
+const submitBtnStyle = { padding: '15px', background: '#09090b', color: '#fff', border: 'none', borderRadius: '10px', fontWeight: '700', cursor: 'pointer' };
+const metricCardStyle = { flex: 1, background: '#fff', padding: '20px', borderRadius: '15px', border: '1px solid #e4e4e7' };
 const metricLabelStyle = { fontSize: '10px', fontWeight: '800', color: '#a1a1aa' };
-const metricValueStyle = { fontSize: '18px', fontWeight: '900' };
+const metricValueStyle = { fontSize: '18px', fontWeight: '900', display: 'block' };
