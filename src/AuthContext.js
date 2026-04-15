@@ -1,11 +1,8 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { auth } from './firebase/config'; 
 import { 
-  signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
-  signOut, 
-  onAuthStateChanged,
-  sendPasswordResetEmail 
+  onAuthStateChanged 
 } from 'firebase/auth';
 
 const AuthContext = createContext();
@@ -15,26 +12,16 @@ export function AuthProvider({ children }) {
   const [loading, setLoading] = useState(true);
 
   function signup(email, password) {
+    // Verificação extra para evitar o 'argument-error'
+    if (!auth) return Promise.reject("Firebase Auth não inicializado");
     return createUserWithEmailAndPassword(auth, email, password);
   }
 
-  function login(email, password) {
-    return signInWithEmailAndPassword(auth, email, password);
-  }
-
-  function resetPassword(email) {
-    return sendPasswordResetEmail(auth, email);
-  }
-
-  function logout() {
-    return signOut(auth);
-  }
-
   useEffect(() => {
-    // A segurança para evitar o erro de argumento caso o auth falhe no carregamento
+    // Se o config.js falhar por qualquer motivo, o app não vai quebrar
     if (!auth) {
-        console.error("Erro Crítico: Objeto Auth não inicializado. Verifique o config.js");
-        return;
+      setLoading(false);
+      return;
     }
 
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
@@ -45,7 +32,7 @@ export function AuthProvider({ children }) {
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, login, signup, logout, resetPassword }}>
+    <AuthContext.Provider value={{ user, signup }}>
       {!loading && children}
     </AuthContext.Provider>
   );
