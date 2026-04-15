@@ -1,6 +1,6 @@
 import React from 'react';
 import { AuthProvider } from './AuthContext';
-import { Register } from './components/Register.js';
+import { Register } from './components/Register';
 import './index.css';
 
 function App() {
