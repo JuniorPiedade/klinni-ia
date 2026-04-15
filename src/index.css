@@ -4,7 +4,6 @@
 
 body {
   margin: 0;
-  font-family: 'Inter', sans-serif;
-  background-color: #F4F7F6;
-  -webkit-font-smoothing: antialiased;
+  padding: 0;
+  box-sizing: border-box;
 }
