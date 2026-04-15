@@ -1,7 +1,7 @@
 import React from 'react';
 import { AuthProvider } from './AuthContext';
 import { Login } from './components/Login';
-import { Register } from './components/Register'; 
+import { Register } from './components/Register';
 import './index.css';
 
 function App() {
