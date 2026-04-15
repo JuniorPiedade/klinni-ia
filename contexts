@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { auth } from '../lib/firebase'; // Certifique-se de ter o arquivo de config do Firebase
+// Ajustado para buscar na sua pasta firebase correta
+import { auth } from './firebase/firebase'; 
 import { 
   signInWithEmailAndPassword, 
   createUserWithEmailAndPassword, 
