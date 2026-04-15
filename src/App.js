@@ -1,14 +1,13 @@
 import React from 'react';
 import { AuthProvider } from './AuthContext';
-// Note as chaves { } em volta do Login. Agora está correto!
-import { Login } from './components/Login'; 
+import { Login } from './components/Login';
 import './index.css';
 
 function App() {
   return (
     <AuthProvider>
       <div className="App">
-        {/* Renderiza a tela de login da Klinni IA */}
+        {/* O Login agora está protegido pelo AuthProvider */}
         <Login />
       </div>
     </AuthProvider>
