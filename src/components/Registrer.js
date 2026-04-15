@@ -1,4 +1,3 @@
-// 📝 Registro de Usuário Simples - Klinni IA
 import React, { useState } from 'react';
 import { useAuth } from '../AuthContext';
 
@@ -9,90 +8,123 @@ export const Register = () => {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   
+  // Pegamos a função de cadastro do nosso AuthContext
   const { signup } = useAuth();
 
   async function handleSubmit(e) {
     e.preventDefault();
 
+    // Validação básica de senha
     if (password !== confirmPassword) {
       return setError('As senhas não coincidem.');
+    }
+
+    if (password.length < 6) {
+      return setError('A senha deve ter pelo menos 6 caracteres.');
     }
 
     try {
       setError('');
       setLoading(true);
+      
+      // Chamada oficial ao Firebase via Contexto
       await signup(email, password);
-      alert('Conta criada com sucesso!');
+      
+      alert('Conta Klinni IA criada com sucesso!');
+      // Aqui, futuramente, redirecionaremos para o Dashboard
     } catch (err) {
-      setError('Falha ao criar conta. Verifique os dados.');
       console.error(err);
+      if (err.code === 'auth/email-already-in-use') {
+        setError('Este e-mail já está em uso.');
+      } else {
+        setError('Falha ao criar conta. Verifique sua conexão.');
+      }
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className="bg-brand-gray-50 min-h-screen flex items-center justify-center p-6 font-inter">
-      <div className="max-w-md w-full bg-white p-10 rounded-[24px] shadow-2xl border border-gray-100">
+    <div className="bg-[#F8FAFC] min-h-screen flex items-center justify-center p-6 font-sans">
+      <div className="max-w-md w-full bg-white p-10 rounded-[32px] shadow-xl border border-gray-100">
         
+        {/* Logo Klinni IA */}
         <div className="text-center mb-10">
-          <h1 className="text-4xl font-black text-brand-gray-900 tracking-tighter italic">
-            KLINNI <span className="text-brand-orange">IA</span>
+          <h1 className="text-3xl font-black text-gray-900 tracking-tighter italic uppercase">
+            Klinni <span className="text-orange-500">IA</span>
           </h1>
-          <p className="text-gray-400 text-sm mt-2 font-light italic">Crie seu acesso premium</p>
+          <p className="text-gray-400 text-xs mt-2 font-medium tracking-widest uppercase">
+            Lead Management SaaS
+          </p>
         </div>
 
+        {/* Mensagem de Erro */}
         {error && (
-          <div className="bg-red-50 text-red-600 p-4 rounded-xl mb-6 text-xs text-center border border-red-100 font-bold">
+          <div className="bg-red-50 text-red-600 p-4 rounded-2xl mb-6 text-sm text-center border border-red-100 font-medium">
             {error}
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Campo de E-mail */}
           <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">E-mail Profissional</label>
+            <label className="text-[11px] font-bold text-gray-400 uppercase ml-2 tracking-wider">
+              E-mail da Clínica
+            </label>
             <input 
               type="email" 
               required
               value={email}
               onChange={(e) => { setEmail(e.target.value); setError(''); }}
               placeholder="exemplo@clinica.com" 
-              className="w-full p-4 mt-1 rounded-xl bg-gray-50 border border-transparent focus:border-brand-orange focus:bg-white outline-none transition-all shadow-sm"
+              className="w-full p-4 mt-1 rounded-2xl bg-gray-50 border border-transparent focus:border-orange-500 focus:bg-white outline-none transition-all duration-300 shadow-sm"
             />
           </div>
 
+          {/* Campo de Senha */}
           <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Sua Senha</label>
+            <label className="text-[11px] font-bold text-gray-400 uppercase ml-2 tracking-wider">
+              Nova Senha
+            </label>
             <input 
               type="password" 
               required
               value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }}
               placeholder="••••••••" 
-              className="w-full p-4 mt-1 rounded-xl bg-gray-50 border border-transparent focus:border-brand-orange focus:bg-white outline-none transition-all shadow-sm"
+              className="w-full p-4 mt-1 rounded-2xl bg-gray-50 border border-transparent focus:border-orange-500 focus:bg-white outline-none transition-all duration-300 shadow-sm"
             />
           </div>
 
+          {/* Confirmar Senha */}
           <div>
-            <label className="text-[10px] font-bold text-gray-400 uppercase ml-1">Confirmar Senha</label>
+            <label className="text-[11px] font-bold text-gray-400 uppercase ml-2 tracking-wider">
+              Confirmar Senha
+            </label>
             <input 
               type="password" 
               required
               value={confirmPassword}
               onChange={(e) => { setConfirmPassword(e.target.value); setError(''); }}
               placeholder="••••••••" 
-              className="w-full p-4 mt-1 rounded-xl bg-gray-50 border border-transparent focus:border-brand-orange focus:bg-white outline-none transition-all shadow-sm"
+              className="w-full p-4 mt-1 rounded-2xl bg-gray-50 border border-transparent focus:border-orange-500 focus:bg-white outline-none transition-all duration-300 shadow-sm"
             />
           </div>
 
+          {/* Botão de Ação */}
           <button 
             disabled={loading}
             type="submit"
-            className="w-full bg-brand-orange text-white p-4 rounded-xl font-bold shadow-lg shadow-orange-100 hover:bg-[#e66000] hover:scale-[1.01] active:scale-[0.99] transition-all disabled:opacity-50"
+            className="w-full bg-orange-500 text-white p-4 rounded-2xl font-bold shadow-lg shadow-orange-100 hover:bg-orange-600 hover:scale-[1.02] active:scale-[0.98] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {loading ? 'Criando Conta...' : 'Finalizar Cadastro'}
+            {loading ? 'Processando...' : 'Criar Conta Premium'}
           </button>
         </form>
+
+        {/* Rodapé do Card */}
+        <div className="mt-8 text-center text-gray-400 text-xs">
+          Já possui uma conta? <span className="text-orange-500 font-bold cursor-pointer hover:underline">Fazer Login</span>
+        </div>
       </div>
     </div>
   );
