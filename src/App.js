@@ -1,13 +1,14 @@
 import React from 'react';
 import { AuthProvider } from './AuthContext';
-import Login from './components/Login'; // Vamos criar este componente a seguir
+// Note as chaves { } em volta do Login. Agora está correto!
+import { Login } from './components/Login'; 
 import './index.css';
 
 function App() {
   return (
     <AuthProvider>
       <div className="App">
-        {/* Por enquanto, vamos renderizar apenas o Login para testar */}
+        {/* Renderiza a tela de login da Klinni IA */}
         <Login />
       </div>
     </AuthProvider>
