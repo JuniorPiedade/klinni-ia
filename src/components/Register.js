@@ -19,27 +19,32 @@ export const Register = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
-      <form onSubmit={handleSubmit} className="p-8 bg-white shadow-md rounded-lg">
-        <h2 className="text-2xl font-bold mb-6 text-gray-800">Klinni IA - Cadastro</h2>
-        {error && <p className="text-red-500 mb-4">{error}</p>}
-        <input
-          type="email"
-          placeholder="Email"
-          className="w-full p-2 mb-4 border rounded"
-          onChange={(e) => setEmail(e.target.value)}
-          required
-        />
-        <input
-          type="password"
-          placeholder="Senha"
-          className="w-full p-2 mb-4 border rounded"
-          onChange={(e) => setPassword(e.target.value)}
-          required
-        />
-        <button type="submit" className="w-full bg-blue-500 text-white p-2 rounded hover:bg-blue-600">
-          Criar Conta
-        </button>
+    <div className="flex flex-col items-center justify-center min-h-screen bg-gray-50 p-4">
+      <form onSubmit={handleSubmit} className="w-full max-w-md p-8 bg-white shadow-sm rounded-2xl border border-gray-100">
+        <h2 className="text-2xl font-bold mb-6 text-gray-800 text-center">Klinni IA</h2>
+        {error && <p className="text-red-500 text-sm mb-4 text-center">{error}</p>}
+        <div className="space-y-4">
+          <input
+            type="email"
+            placeholder="Seu email"
+            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+            onChange={(e) => setEmail(e.target.value)}
+            required
+          />
+          <input
+            type="password"
+            placeholder="Sua senha"
+            className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-100"
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
+          <button 
+            type="submit" 
+            className="w-full bg-blue-400 text-white font-bold p-3 rounded-xl hover:bg-blue-500 transition-colors shadow-sm"
+          >
+            Acessar Sistema
+          </button>
+        </div>
       </form>
     </div>
   );
