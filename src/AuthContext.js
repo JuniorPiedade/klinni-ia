@@ -31,6 +31,12 @@ export function AuthProvider({ children }) {
   }
 
   useEffect(() => {
+    // A segurança para evitar o erro de argumento caso o auth falhe no carregamento
+    if (!auth) {
+        console.error("Erro Crítico: Objeto Auth não inicializado. Verifique o config.js");
+        return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
       setLoading(false);
