@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, query, orderBy, onSnapshot } from 'firebase/firestore';
 
-export const ListaLeads = () => {
+const ListaLeads = () => {
   const [leads, setLeads] = useState([]);
 
   useEffect(() => {
@@ -51,3 +51,5 @@ export const ListaLeads = () => {
     </div>
   );
 };
+
+export default ListaLeads;
