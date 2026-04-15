@@ -18,22 +18,11 @@ export const Register = () => {
 
   return (
     <div>
+      <h2>Klinni IA - Teste</h2>
       <form onSubmit={handleSubmit}>
-        <input 
-          type="email" 
-          value={email}
-          onChange={(e) => setEmail(e.target.value)} 
-          placeholder="Email"
-          required 
-        />
-        <input 
-          type="password" 
-          value={password}
-          onChange={(e) => setPassword(e.target.value)} 
-          placeholder="Senha"
-          required 
-        />
-        <button type="submit">Testar Build</button>
+        <input type="email" placeholder="Email" onChange={(e) => setEmail(e.target.value)} required />
+        <input type="password" placeholder="Senha" onChange={(e) => setPassword(e.target.value)} required />
+        <button type="submit">Cadastrar</button>
       </form>
     </div>
   );
