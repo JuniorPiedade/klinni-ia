@@ -22,7 +22,7 @@ import {
 
 // --- CONFIGURAÇÃO FIREBASE ---
 const firebaseConfig = {
-  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM", 
+  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM",
   authDomain: "klinni-ia.firebaseapp.com",
   projectId: "klinni-ia",
   storageBucket: "klinni-ia.firebasestorage.app",
@@ -30,7 +30,7 @@ const firebaseConfig = {
   appId: "1:761229946691:web:feeceb3caed42445be09f6"
 };
 
-// Inicialização segura para prevenir erros de re-inicialização
+// Inicialização segura para ambiente de Build
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -41,7 +41,7 @@ const THEME = {
   secondary: '#09090b',
   bg: '#fafafa',
   border: '#e4e4e7',
-  font: 'Inter, system-ui, sans-serif'
+  font: 'Inter, system-ui, -apple-system, sans-serif'
 };
 
 const STATUS_THEME = {
@@ -51,25 +51,29 @@ const STATUS_THEME = {
   'Não qualificado': { bg: '#fef2f2', text: '#991b1b' }
 };
 
+// --- COMPONENTE PRINCIPAL ---
 export default function App() {
-  // --- STATES ---
+  // Estados de Autenticação e App
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   
-  // Auth
+  // Estados do Formulário de Login
   const [phone, setPhone] = useState("");
   const [code, setCode] = useState("");
   const [confirmationResult, setConfirmationResult] = useState(null);
   const [step, setStep] = useState("phone"); 
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState("");
+  
+  // Referência para o Recaptcha (Previne erros de Build e duplicação)
   const recaptchaRef = useRef(null);
 
-  // Leads & Filtros
+  // Estados do Dashboard e Cadastro
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("Todos");
+  const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({
     nome: '',
     dataManual: '',
@@ -77,47 +81,60 @@ export default function App() {
     status: 'Pendente',
     valor: ''
   });
-  const [isSaving, setIsSaving] = useState(false);
 
-  // --- EFEITOS ---
+  // Monitoramento de Usuário
   useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => { 
-      setUser(u); 
-      setLoading(false); 
+    const unsubscribeAuth = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      setLoading(false);
     });
-    return () => unsub();
+    return () => unsubscribeAuth();
   }, []);
 
+  // Monitoramento de Leads (Firestore)
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-    const unsub = onSnapshot(q, (s) => {
-      setLeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
-    }, (error) => console.error("Erro Firestore:", error));
-    return () => unsub();
+    const leadsRef = collection(db, "leads");
+    const q = query(
+      leadsRef, 
+      where("userId", "==", user.uid), 
+      orderBy("createdAt", "desc")
+    );
+
+    const unsubscribeLeads = onSnapshot(q, (snapshot) => {
+      const leadsData = snapshot.docs.map(docSnap => ({
+        id: docSnap.id,
+        ...docSnap.data()
+      }));
+      setLeads(leadsData);
+    });
+
+    return () => unsubscribeLeads();
   }, [user]);
 
-  // --- FUNÇÕES AUTH ---
+  // Funções de Autenticação
   const handleSendCode = async () => {
     if (typeof window === "undefined") return;
     if (!phone.startsWith('+')) {
-      setAuthError("Use o formato: +5571999999999");
+      setAuthError("Formato inválido. Use +55...");
       return;
     }
-    
+
     setAuthLoading(true);
     setAuthError("");
 
     try {
       if (!recaptchaRef.current) {
-        recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
+        recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
+          size: 'invisible'
+        });
       }
       const result = await signInWithPhoneNumber(auth, phone, recaptchaRef.current);
       setConfirmationResult(result);
       setStep("code");
-    } catch (error) {
-      console.error(error);
-      setAuthError("Erro ao enviar SMS. Verifique o número.");
+    } catch (err) {
+      console.error("Erro SMS:", err);
+      setAuthError("Erro ao enviar SMS.");
       if (recaptchaRef.current) {
         recaptchaRef.current.clear();
         recaptchaRef.current = null;
@@ -131,20 +148,20 @@ export default function App() {
     setAuthLoading(true);
     try {
       await confirmationResult.confirm(code);
-    } catch (error) {
-      console.error(error);
-      setAuthError("Código inválido.");
+    } catch (err) {
+      setAuthError("Código incorreto.");
     } finally {
       setAuthLoading(false);
     }
   };
 
-  // --- FUNÇÕES LEADS ---
-  const handleUpdateStatus = async (id, newStatus) => {
+  // Funções de Negócio
+  const handleUpdateStatus = async (leadId, newStatus) => {
     try {
-      await updateDoc(doc(db, "leads", id), { status: newStatus });
-    } catch (e) {
-      console.error(e);
+      const leadDoc = doc(db, "leads", leadId);
+      await updateDoc(leadDoc, { status: newStatus });
+    } catch (err) {
+      console.error("Erro Status:", err);
     }
   };
 
@@ -165,106 +182,154 @@ export default function App() {
       setFormData({ nome: '', dataManual: '', origem: 'INSTAGRAM', status: 'Pendente', valor: '' });
       setView('dashboard');
     } catch (err) {
-      console.error(err);
+      console.error("Erro Salvar:", err);
     } finally {
       setIsSaving(false);
     }
   };
 
-  // --- LOGICA DE INTERFACE ---
-  const filteredLeads = leads.filter(l => {
-    const n = l.nome || "";
-    const matchSearch = n.toLowerCase().includes(search.toLowerCase());
-    const matchStatus = statusFilter === "Todos" || l.status === statusFilter;
-    return matchSearch && matchStatus;
+  // Lógica de Filtros
+  const filteredLeads = leads.filter(lead => {
+    const nomeLead = lead.nome || "";
+    const matchBusca = nomeLead.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "Todos" || lead.status === statusFilter;
+    return matchBusca && matchStatus;
   });
 
-  const totalValor = leads.reduce((acc, l) => acc + (l.valorOrcamento || 0), 0);
+  const totalEmOrcamentos = leads.reduce((acc, lead) => acc + (lead.valorOrcamento || 0), 0);
 
+  // Renderização de Segurança
   if (loading) return null;
 
+  // Tela de Autenticação
   if (!user) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: THEME.bg, fontFamily: THEME.font }}>
-        <div style={{ background: "#fff", padding: "40px", borderRadius: "24px", border: `1px solid ${THEME.border}`, width: "100%", maxWidth: "360px", textAlign: 'center' }}>
-          <h2 style={{ fontWeight: '900', marginBottom: '24px' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h2>
+        <div style={{ background: "#fff", padding: "40px", borderRadius: "24px", border: `1px solid ${THEME.border}`, width: "100%", maxWidth: "360px" }}>
+          <h1 style={{ fontWeight: '900', fontSize: '22px', textAlign: 'center', marginBottom: '30px' }}>
+            KLINNI <span style={{ color: THEME.primary }}>IA</span>
+          </h1>
+          
           {step === "phone" ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input placeholder="+5571999999999" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
-              <button onClick={handleSendCode} disabled={authLoading} style={buttonStyle}>{authLoading ? "Enviando..." : "Entrar"}</button>
+              <input 
+                placeholder="+5571999999999" 
+                value={phone} 
+                onChange={e => setPhone(e.target.value)} 
+                style={styleInput} 
+              />
+              <button onClick={handleSendCode} disabled={authLoading} style={styleButtonPrimary}>
+                {authLoading ? "Enviando..." : "Entrar com Telefone"}
+              </button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input placeholder="Código SMS" value={code} onChange={e => setCode(e.target.value)} style={{ ...inputStyle, textAlign: 'center', letterSpacing: '4px' }} />
-              <button onClick={handleConfirmCode} disabled={authLoading} style={{...buttonStyle, background: THEME.primary}}>Confirmar</button>
-              <button onClick={() => setStep("phone")} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#71717a', cursor: 'pointer' }}>Voltar</button>
+              <input 
+                placeholder="Código de 6 dígitos" 
+                value={code} 
+                onChange={e => setCode(e.target.value)} 
+                style={{ ...styleInput, textAlign: 'center', letterSpacing: '4px' }} 
+              />
+              <button onClick={handleConfirmCode} disabled={authLoading} style={{ ...styleButtonPrimary, background: THEME.primary }}>
+                {authLoading ? "Validando..." : "Confirmar"}
+              </button>
+              <button onClick={() => setStep("phone")} style={{ background: 'none', border: 'none', color: '#71717a', fontSize: '12px', cursor: 'pointer' }}>
+                Voltar
+              </button>
             </div>
           )}
-          {authError && <p style={{ color: 'red', fontSize: '12px', marginTop: '10px' }}>{authError}</p>}
+          {authError && <p style={{ color: 'red', fontSize: '12px', marginTop: '15px', textAlign: 'center' }}>{authError}</p>}
           <div id="recaptcha-container"></div>
         </div>
       </div>
     );
   }
 
+  // Tela Principal (Dashboard)
   return (
     <div style={{ minHeight: '100vh', background: THEME.bg, fontFamily: THEME.font }}>
-      <nav style={navStyle}>
+      <nav style={styleNav}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
           <h2 style={{ fontWeight: '900', fontSize: '14px' }}>KLINNI IA</h2>
-          <button onClick={() => setView('dashboard')} style={{ ...navBtn, color: view === 'dashboard' ? THEME.primary : '#71717a' }}>Dashboard</button>
-          <button onClick={() => setView('novoLead')} style={{ ...navBtn, color: view === 'novoLead' ? THEME.primary : '#71717a' }}>+ Novo Lead</button>
+          <button onClick={() => setView('dashboard')} style={{ ...styleNavBtn, color: view === 'dashboard' ? THEME.primary : '#71717a' }}>Fluxo</button>
+          <button onClick={() => setView('novoLead')} style={{ ...styleNavBtn, color: view === 'novoLead' ? THEME.primary : '#71717a' }}>+ Novo Lead</button>
         </div>
         <button onClick={() => signOut(auth)} style={{ border: 'none', background: 'none', cursor: 'pointer', fontSize: '12px', color: '#a1a1aa' }}>Sair</button>
       </nav>
 
-      <main style={{ padding: '40px', maxWidth: '1200px', margin: '0 auto' }}>
+      <main style={{ padding: '30px', maxWidth: '1100px', margin: '0 auto' }}>
         {view === 'dashboard' ? (
           <>
-            <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
-              <div style={metricCard}><span>Leads</span><strong>{leads.length}</strong></div>
-              <div style={metricCard}><span>Total Orçado</span><strong>R$ {totalValor.toLocaleString('pt-BR')}</strong></div>
+            <div style={{ display: 'flex', gap: '15px', marginBottom: '30px' }}>
+              <div style={styleMetric}>
+                <span style={styleMetricLabel}>Total Leads</span>
+                <strong style={styleMetricValue}>{leads.length}</strong>
+              </div>
+              <div style={styleMetric}>
+                <span style={styleMetricLabel}>Valor em Caixa</span>
+                <strong style={styleMetricValue}>R$ {totalEmOrcamentos.toLocaleString('pt-BR')}</strong>
+              </div>
             </div>
-            <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <input placeholder="Pesquisar..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2 }} />
-              <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                <option value="Todos">Todos Status</option>
+
+            <div style={{ display: 'flex', gap: '10px', marginBottom: '25px' }}>
+              <input 
+                placeholder="Pesquisar por nome..." 
+                value={search} 
+                onChange={e => setSearch(e.target.value)} 
+                style={{ ...styleInput, flex: 2 }} 
+              />
+              <select 
+                value={statusFilter} 
+                onChange={e => setStatusFilter(e.target.value)} 
+                style={{ ...styleInput, flex: 1 }}
+              >
+                <option value="Todos">Todos</option>
                 {Object.keys(STATUS_THEME).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' }}>
-              {filteredLeads.map(l => (
-                <div key={l.id} style={{ background: '#fff', padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}` }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '10px', color: '#a1a1aa', fontWeight: 'bold' }}>{l.origem}</span>
-                    <select value={l.status} onChange={e => handleUpdateStatus(l.id, e.target.value)} style={{ fontSize: '10px', borderRadius: '20px', border: 'none', padding: '4px 8px', background: STATUS_THEME[l.status]?.bg || '#eee', color: STATUS_THEME[l.status]?.text || '#333' }}>
-                      {Object.keys(STATUS_THEME).map(s => <option key={s} value={s}>{s}</option>)}
-                    </select>
+
+            <div style={styleGrid}>
+              {filteredLeads.map(lead => {
+                const badge = STATUS_THEME[lead.status] || STATUS_THEME['Pendente'];
+                return (
+                  <div key={lead.id} style={styleCard}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '12px' }}>
+                      <span style={{ fontSize: '10px', fontWeight: 'bold', color: '#a1a1aa' }}>{lead.origem}</span>
+                      <select 
+                        value={lead.status} 
+                        onChange={e => handleUpdateStatus(lead.id, e.target.value)} 
+                        style={{ ...styleBadge, background: badge.bg, color: badge.text }}
+                      >
+                        {Object.keys(STATUS_THEME).map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <h3 style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: '800' }}>{lead.nome}</h3>
+                    <p style={{ fontSize: '12px', color: '#3b82f6', fontWeight: '600', marginBottom: '15px' }}>🗓️ {lead.dataAgendamento}</p>
+                    <div style={styleCardFooter}>
+                      <span style={{ fontSize: '10px', color: '#a1a1aa' }}>VALOR</span>
+                      <span style={{ fontWeight: '900' }}>R$ {lead.valorOrcamento?.toLocaleString('pt-BR')}</span>
+                    </div>
                   </div>
-                  <h3 style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: '800' }}>{l.nome}</h3>
-                  <div style={{ fontSize: '12px', color: '#3b82f6', marginBottom: '15px', fontWeight: '600' }}>🗓️ {l.dataAgendamento}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${THEME.border}`, paddingTop: '10px', alignItems: 'center' }}>
-                    <span style={{ fontSize: '10px', color: '#a1a1aa' }}>ORÇAMENTO</span>
-                    <span style={{ fontWeight: '900', fontSize: '15px' }}>R$ {l.valorOrcamento?.toLocaleString('pt-BR')}</span>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </>
         ) : (
-          <div style={{ maxWidth: '400px', margin: '0 auto', background: '#fff', padding: '30px', borderRadius: '24px', border: `1px solid ${THEME.border}` }}>
-            <h2 style={{ marginBottom: '20px', fontWeight: '900' }}>Novo Lead</h2>
+          <div style={styleFormContainer}>
+            <h2 style={{ marginBottom: '25px', fontWeight: '900' }}>Novo Registro</h2>
             <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              <input placeholder="Nome" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={inputStyle} />
-              <input placeholder="Data e Hora (Ex: 10/05 14h)" value={formData.dataManual} onChange={e => setFormData({...formData, dataManual: e.target.value})} style={inputStyle} />
-              <select value={formData.origem} onChange={e => setFormData({...formData, origem: e.target.value})} style={inputStyle}>
+              <input placeholder="Nome do Cliente" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={styleInput} />
+              <input placeholder="Data/Hora (Ex: Amanhã 14h)" value={formData.dataManual} onChange={e => setFormData({...formData, dataManual: e.target.value})} style={styleInput} />
+              <select value={formData.origem} onChange={e => setFormData({...formData, origem: e.target.value})} style={styleInput}>
                 <option value="INSTAGRAM">Instagram</option>
-                <option value="FACEBOOK">Facebook</option>
-                <option value="SITE">Site</option>
                 <option value="WHATSAPP">WhatsApp</option>
+                <option value="SITE">Site</option>
               </select>
-              <input type="number" placeholder="Valor Estimado R$" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} style={inputStyle} />
-              <button type="submit" disabled={isSaving} style={{ ...buttonStyle, background: THEME.primary }}>{isSaving ? 'Salvando...' : 'Cadastrar Lead'}</button>
+              <input type="number" placeholder="Valor Estimado (R$)" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} style={styleInput} />
+              <button type="submit" disabled={isSaving} style={{ ...styleButtonPrimary, background: THEME.primary }}>
+                {isSaving ? 'Salvando...' : 'Cadastrar Lead'}
+              </button>
+              <button type="button" onClick={() => setView('dashboard')} style={{ background: 'none', border: 'none', fontSize: '12px', cursor: 'pointer' }}>Cancelar</button>
             </form>
           </div>
         )}
@@ -273,8 +338,16 @@ export default function App() {
   );
 }
 
-const inputStyle = { padding: '12px', borderRadius: '10px', border: '1px solid #e4e4e7', outline: 'none', width: '100%', boxSizing: 'border-box', fontSize: '14px' };
-const buttonStyle = { padding: '14px', background: THEME.secondary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' };
-const navStyle = { display: 'flex', justifyContent: 'space-between', padding: '0 40px', height: '60px', background: '#fff', borderBottom: `1px solid ${THEME.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 };
-const navBtn = { background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' };
-const metricCard = { flex: 1, background: '#fff', padding: '15px', borderRadius: '15px', border: `1px solid ${THEME.border}`, display: 'flex', flexDirection: 'column' };
+// --- ESTILOS (OBJETOS) ---
+const styleInput = { padding: '12px', borderRadius: '10px', border: '1px solid #e4e4e7', outline: 'none', width: '100%', boxSizing: 'border-box', fontSize: '14px' };
+const styleButtonPrimary = { padding: '14px', background: THEME.secondary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer', transition: '0.2s' };
+const styleNav = { display: 'flex', justifyContent: 'space-between', padding: '0 40px', height: '64px', background: '#fff', borderBottom: `1px solid ${THEME.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 };
+const styleNavBtn = { background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' };
+const styleMetric = { flex: 1, background: '#fff', padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}` };
+const styleMetricLabel = { fontSize: '10px', color: '#a1a1aa', fontWeight: 'bold', display: 'block' };
+const styleMetricValue = { fontSize: '20px', fontWeight: '900' };
+const styleGrid = { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '20px' };
+const styleCard = { background: '#fff', padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}` };
+const styleBadge = { fontSize: '10px', borderRadius: '20px', border: 'none', padding: '4px 10px', fontWeight: 'bold', cursor: 'pointer' };
+const styleCardFooter = { display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${THEME.border}`, paddingTop: '15px', alignItems: 'center' };
+const styleFormContainer = { maxWidth: '400px', margin: '0 auto', background: '#fff', padding: '35px', borderRadius: '24px', border: `1px solid ${THEME.border}` };
