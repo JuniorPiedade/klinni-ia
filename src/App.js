@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { 
   getAuth, 
   onAuthStateChanged, 
@@ -30,8 +30,8 @@ const firebaseConfig = {
   appId: "1:761229946691:web:feeceb3caed42445be09f6"
 };
 
-// Inicialização segura para Build (SSR)
-const app = initializeApp(firebaseConfig);
+// Inicialização segura para prevenir erros de re-inicialização
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 const auth = getAuth(app);
 const db = getFirestore(app);
 
@@ -41,8 +41,7 @@ const THEME = {
   secondary: '#09090b',
   bg: '#fafafa',
   border: '#e4e4e7',
-  white: '#ffffff',
-  font: 'Inter, -apple-system, system-ui, sans-serif'
+  font: 'Inter, system-ui, sans-serif'
 };
 
 const STATUS_THEME = {
@@ -91,18 +90,14 @@ export default function App() {
 
   useEffect(() => {
     if (!user) return;
-    try {
-      const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-      const unsub = onSnapshot(q, (s) => {
-        setLeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
-      });
-      return () => unsub();
-    } catch (e) {
-      console.error("Erro Firestore:", e);
-    }
+    const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
+    const unsub = onSnapshot(q, (s) => {
+      setLeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (error) => console.error("Erro Firestore:", error));
+    return () => unsub();
   }, [user]);
 
-  // --- FUNÇÕES AUTH (CLIENT-SIDE ONLY) ---
+  // --- FUNÇÕES AUTH ---
   const handleSendCode = async () => {
     if (typeof window === "undefined") return;
     if (!phone.startsWith('+')) {
@@ -121,6 +116,7 @@ export default function App() {
       setConfirmationResult(result);
       setStep("code");
     } catch (error) {
+      console.error(error);
       setAuthError("Erro ao enviar SMS. Verifique o número.");
       if (recaptchaRef.current) {
         recaptchaRef.current.clear();
@@ -136,6 +132,7 @@ export default function App() {
     try {
       await confirmationResult.confirm(code);
     } catch (error) {
+      console.error(error);
       setAuthError("Código inválido.");
     } finally {
       setAuthLoading(false);
@@ -174,10 +171,12 @@ export default function App() {
     }
   };
 
-  // --- RENDERIZAÇÃO ---
+  // --- LOGICA DE INTERFACE ---
   const filteredLeads = leads.filter(l => {
     const n = l.nome || "";
-    return n.toLowerCase().includes(search.toLowerCase()) && (statusFilter === "Todos" || l.status === statusFilter);
+    const matchSearch = n.toLowerCase().includes(search.toLowerCase());
+    const matchStatus = statusFilter === "Todos" || l.status === statusFilter;
+    return matchSearch && matchStatus;
   });
 
   const totalValor = leads.reduce((acc, l) => acc + (l.valorOrcamento || 0), 0);
@@ -187,21 +186,21 @@ export default function App() {
   if (!user) {
     return (
       <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: THEME.bg, fontFamily: THEME.font }}>
-        <div style={{ background: "#fff", padding: "40px", borderRadius: "24px", border: `1px solid ${THEME.border}`, width: "100%", maxWidth: "360px" }}>
-          <h2 style={{ fontWeight: '900', textAlign: 'center', marginBottom: '24px' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h2>
+        <div style={{ background: "#fff", padding: "40px", borderRadius: "24px", border: `1px solid ${THEME.border}`, width: "100%", maxWidth: "360px", textAlign: 'center' }}>
+          <h2 style={{ fontWeight: '900', marginBottom: '24px' }}>KLINNI <span style={{ color: THEME.primary }}>IA</span></h2>
           {step === "phone" ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
               <input placeholder="+5571999999999" value={phone} onChange={e => setPhone(e.target.value)} style={inputStyle} />
-              <button onClick={handleSendCode} disabled={authLoading} style={buttonStyle}>{authLoading ? "Enviando..." : "Entrar com WhatsApp"}</button>
+              <button onClick={handleSendCode} disabled={authLoading} style={buttonStyle}>{authLoading ? "Enviando..." : "Entrar"}</button>
             </div>
           ) : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
-              <input placeholder="Código SMS" value={code} onChange={e => setCode(e.target.value)} style={inputStyle} />
+              <input placeholder="Código SMS" value={code} onChange={e => setCode(e.target.value)} style={{ ...inputStyle, textAlign: 'center', letterSpacing: '4px' }} />
               <button onClick={handleConfirmCode} disabled={authLoading} style={{...buttonStyle, background: THEME.primary}}>Confirmar</button>
               <button onClick={() => setStep("phone")} style={{ background: 'none', border: 'none', fontSize: '12px', color: '#71717a', cursor: 'pointer' }}>Voltar</button>
             </div>
           )}
-          {authError && <p style={{ color: 'red', fontSize: '12px', marginTop: '10px', textAlign: 'center' }}>{authError}</p>}
+          {authError && <p style={{ color: 'red', fontSize: '12px', marginTop: '10px' }}>{authError}</p>}
           <div id="recaptcha-container"></div>
         </div>
       </div>
@@ -211,7 +210,7 @@ export default function App() {
   return (
     <div style={{ minHeight: '100vh', background: THEME.bg, fontFamily: THEME.font }}>
       <nav style={navStyle}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '30px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '25px' }}>
           <h2 style={{ fontWeight: '900', fontSize: '14px' }}>KLINNI IA</h2>
           <button onClick={() => setView('dashboard')} style={{ ...navBtn, color: view === 'dashboard' ? THEME.primary : '#71717a' }}>Dashboard</button>
           <button onClick={() => setView('novoLead')} style={{ ...navBtn, color: view === 'novoLead' ? THEME.primary : '#71717a' }}>+ Novo Lead</button>
@@ -224,12 +223,12 @@ export default function App() {
           <>
             <div style={{ display: 'flex', gap: '20px', marginBottom: '30px' }}>
               <div style={metricCard}><span>Leads</span><strong>{leads.length}</strong></div>
-              <div style={metricCard}><span>Total</span><strong>R$ {totalValor.toLocaleString('pt-BR')}</strong></div>
+              <div style={metricCard}><span>Total Orçado</span><strong>R$ {totalValor.toLocaleString('pt-BR')}</strong></div>
             </div>
             <div style={{ display: 'flex', gap: '10px', marginBottom: '20px' }}>
-              <input placeholder="Filtrar..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2 }} />
+              <input placeholder="Pesquisar..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, flex: 2 }} />
               <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} style={{ ...inputStyle, flex: 1 }}>
-                <option value="Todos">Todos</option>
+                <option value="Todos">Todos Status</option>
                 {Object.keys(STATUS_THEME).map(s => <option key={s} value={s}>{s}</option>)}
               </select>
             </div>
@@ -237,16 +236,16 @@ export default function App() {
               {filteredLeads.map(l => (
                 <div key={l.id} style={{ background: '#fff', padding: '20px', borderRadius: '20px', border: `1px solid ${THEME.border}` }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
-                    <span style={{ fontSize: '10px', color: '#a1a1aa' }}>{l.origem}</span>
-                    <select value={l.status} onChange={e => handleUpdateStatus(l.id, e.target.value)} style={{ fontSize: '10px', borderRadius: '20px', border: 'none', padding: '2px 8px', background: STATUS_THEME[l.status]?.bg || '#eee' }}>
+                    <span style={{ fontSize: '10px', color: '#a1a1aa', fontWeight: 'bold' }}>{l.origem}</span>
+                    <select value={l.status} onChange={e => handleUpdateStatus(l.id, e.target.value)} style={{ fontSize: '10px', borderRadius: '20px', border: 'none', padding: '4px 8px', background: STATUS_THEME[l.status]?.bg || '#eee', color: STATUS_THEME[l.status]?.text || '#333' }}>
                       {Object.keys(STATUS_THEME).map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
-                  <h3 style={{ margin: '0 0 10px 0', fontSize: '16px' }}>{l.nome}</h3>
-                  <div style={{ fontSize: '12px', color: '#3b82f6', marginBottom: '15px' }}>🗓️ {l.dataAgendamento}</div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${THEME.border}`, paddingTop: '10px' }}>
-                    <span style={{ fontSize: '10px', color: '#a1a1aa' }}>VALOR</span>
-                    <span style={{ fontWeight: '800' }}>R$ {l.valorOrcamento?.toLocaleString('pt-BR')}</span>
+                  <h3 style={{ margin: '0 0 5px 0', fontSize: '16px', fontWeight: '800' }}>{l.nome}</h3>
+                  <div style={{ fontSize: '12px', color: '#3b82f6', marginBottom: '15px', fontWeight: '600' }}>🗓️ {l.dataAgendamento}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: `1px solid ${THEME.border}`, paddingTop: '10px', alignItems: 'center' }}>
+                    <span style={{ fontSize: '10px', color: '#a1a1aa' }}>ORÇAMENTO</span>
+                    <span style={{ fontWeight: '900', fontSize: '15px' }}>R$ {l.valorOrcamento?.toLocaleString('pt-BR')}</span>
                   </div>
                 </div>
               ))}
@@ -254,17 +253,18 @@ export default function App() {
           </>
         ) : (
           <div style={{ maxWidth: '400px', margin: '0 auto', background: '#fff', padding: '30px', borderRadius: '24px', border: `1px solid ${THEME.border}` }}>
-            <h2 style={{ marginBottom: '20px' }}>Novo Lead</h2>
+            <h2 style={{ marginBottom: '20px', fontWeight: '900' }}>Novo Lead</h2>
             <form onSubmit={handleSalvarLead} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
               <input placeholder="Nome" value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} required style={inputStyle} />
-              <input placeholder="Data (20/05 às 15:00)" value={formData.dataManual} onChange={e => setFormData({...formData, dataManual: e.target.value})} style={inputStyle} />
+              <input placeholder="Data e Hora (Ex: 10/05 14h)" value={formData.dataManual} onChange={e => setFormData({...formData, dataManual: e.target.value})} style={inputStyle} />
               <select value={formData.origem} onChange={e => setFormData({...formData, origem: e.target.value})} style={inputStyle}>
                 <option value="INSTAGRAM">Instagram</option>
                 <option value="FACEBOOK">Facebook</option>
                 <option value="SITE">Site</option>
+                <option value="WHATSAPP">WhatsApp</option>
               </select>
-              <input type="number" placeholder="Valor R$" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} style={inputStyle} />
-              <button type="submit" disabled={isSaving} style={{ ...buttonStyle, background: THEME.primary }}>{isSaving ? 'Salvando...' : 'Criar Lead'}</button>
+              <input type="number" placeholder="Valor Estimado R$" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} style={inputStyle} />
+              <button type="submit" disabled={isSaving} style={{ ...buttonStyle, background: THEME.primary }}>{isSaving ? 'Salvando...' : 'Cadastrar Lead'}</button>
             </form>
           </div>
         )}
@@ -273,8 +273,7 @@ export default function App() {
   );
 }
 
-// --- ESTILOS ---
-const inputStyle = { padding: '12px', borderRadius: '10px', border: '1px solid #e4e4e7', outline: 'none', width: '100%', boxSizing: 'border-box' };
+const inputStyle = { padding: '12px', borderRadius: '10px', border: '1px solid #e4e4e7', outline: 'none', width: '100%', boxSizing: 'border-box', fontSize: '14px' };
 const buttonStyle = { padding: '14px', background: THEME.secondary, color: '#fff', border: 'none', borderRadius: '10px', fontWeight: 'bold', cursor: 'pointer' };
 const navStyle = { display: 'flex', justifyContent: 'space-between', padding: '0 40px', height: '60px', background: '#fff', borderBottom: `1px solid ${THEME.border}`, alignItems: 'center', position: 'sticky', top: 0, zIndex: 10 };
 const navBtn = { background: 'none', border: 'none', fontWeight: 'bold', cursor: 'pointer', fontSize: '13px' };
