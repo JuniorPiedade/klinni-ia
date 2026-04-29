@@ -1,14 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { initializeApp, getApps } from "firebase/app";
+import { auth, db } from './firebase/config'; // Importando a config central
+import { useAuth } from './AuthContext';
+import { signOut } from "firebase/auth";
 import { 
-  getAuth, 
-  onAuthStateChanged, 
-  signOut, 
-  RecaptchaVerifier, 
-  signInWithPhoneNumber 
-} from "firebase/auth";
-import { 
-  getFirestore, 
   collection, 
   addDoc, 
   query, 
@@ -19,21 +13,6 @@ import {
   doc, 
   updateDoc 
 } from "firebase/firestore";
-
-// --- CONFIGURAÇÃO FIREBASE ---
-const firebaseConfig = {
-  apiKey: "AIzaSyCv7kNOOa1AT71TmvwKLdwi8TyHHVh6htM",
-  authDomain: "klinni-ia.firebaseapp.com",
-  projectId: "klinni-ia",
-  storageBucket: "klinni-ia.firebasestorage.app",
-  messagingSenderId: "761229946691",
-  appId: "1:761229946691:web:feeceb3caed42445be09f6"
-};
-
-// Inicialização "Anti-Erro" para o Vercel
-const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
-const db = getFirestore(app);
 
 // --- DESIGN SYSTEM ---
 const THEME = {
@@ -53,8 +32,7 @@ const STATUS_STYLE = {
 };
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const { user, setupRecaptcha, loginWithPhone, logout } = useAuth();
   const [view, setView] = useState('dashboard');
   const [leads, setLeads] = useState([]);
   
@@ -72,32 +50,26 @@ export default function App() {
   const [isSaving, setIsSaving] = useState(false);
   const [formData, setFormData] = useState({ nome: '', data: '', origem: 'Instagram', valor: '' });
 
-  // Monitorar Login
-  useEffect(() => {
-    const unsub = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
-
   // Monitorar Dados (Firestore)
   useEffect(() => {
     if (!user) return;
     const q = query(collection(db, "leads"), where("userId", "==", user.uid), orderBy("createdAt", "desc"));
-    return onSnapshot(q, (s) => setLeads(s.docs.map(d => ({ id: d.id, ...d.data() }))));
+    const unsubscribe = onSnapshot(q, (s) => {
+      setLeads(s.docs.map(d => ({ id: d.id, ...d.data() })));
+    });
+    return unsubscribe;
   }, [user]);
 
-  // Autenticação SMS
+  // Autenticação SMS unificada
   const handleSendSMS = async () => {
     if (typeof window === "undefined") return;
     setAuthLoading(true);
     setError("");
     try {
       if (!recaptchaRef.current) {
-        recaptchaRef.current = new RecaptchaVerifier(auth, 'recaptcha-anchor', { size: 'invisible' });
+        recaptchaRef.current = setupRecaptcha('recaptcha-anchor');
       }
-      const result = await signInWithPhoneNumber(auth, phone, recaptchaRef.current);
+      const result = await loginWithPhone(phone, recaptchaRef.current);
       setConfirmationResult(result);
       setStep("code");
     } catch (err) {
@@ -116,7 +88,6 @@ export default function App() {
     finally { setAuthLoading(false); }
   };
 
-  // Lógica de Negócio
   const handleAddLead = async (e) => {
     e.preventDefault();
     setIsSaving(true);
@@ -138,9 +109,6 @@ export default function App() {
     await updateDoc(doc(db, "leads", id), { status: newStatus });
   };
 
-  if (loading) return null;
-
-  // VIEW: LOGIN
   if (!user) {
     return (
       <div style={styles.centerPage}>
@@ -171,7 +139,6 @@ export default function App() {
     );
   }
 
-  // VIEW: DASHBOARD / NOVO LEAD
   return (
     <div style={{ minHeight: '100vh', background: THEME.bg, fontFamily: THEME.font }}>
       <nav style={styles.nav}>
@@ -181,7 +148,7 @@ export default function App() {
             <button onClick={() => setView('dashboard')} style={{...styles.navBtn, color: view === 'dashboard' ? THEME.primary : '#71717a'}}>Dashboard</button>
             <button onClick={() => setView('novo')} style={{...styles.navBtn, color: view === 'novo' ? THEME.primary : '#71717a'}}>+ Novo Lead</button>
           </div>
-          <button style={styles.btnExit} onClick={() => signOut(auth)}>Sair</button>
+          <button style={styles.btnExit} onClick={logout}>Sair</button>
         </div>
       </nav>
 
@@ -245,6 +212,7 @@ export default function App() {
   );
 }
 
+// Reutilizando os estilos que você já tem no seu App.js
 const styles = {
   centerPage: { minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: THEME.bg, fontFamily: THEME.font },
   authCard: { background: '#fff', padding: 40, borderRadius: 28, border: `1px solid ${THEME.border}`, width: '100%', maxWidth: 360, textAlign: 'center' },
@@ -262,7 +230,7 @@ const styles = {
   btnExit: { background: 'none', border: 'none', color: '#a1a1aa', fontSize: 11, cursor: 'pointer' },
   main: { maxWidth: 1000, margin: '0 auto', padding: '30px 20px' },
   headerRow: { display: 'flex', gap: 15, marginBottom: 30 },
-  statBox: { flex: 1, background: '#fff', padding: 20, borderRadius: 20, border: `1px solid ${THEME.border}` },
+  statBox: { flex: 1, background: '#fff', padding: 20, borderRadius: 20, border: `1px solid ${THEME.border}`, display: 'flex', flexDirection: 'column' },
   search: { width: '100%', padding: 15, borderRadius: 15, border: `1px solid ${THEME.border}`, marginBottom: 25, outline: 'none' },
   grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 20 },
   card: { background: '#fff', padding: 20, borderRadius: 24, border: `1px solid ${THEME.border}` },
