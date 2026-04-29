@@ -1,60 +1,52 @@
 import React, { useState } from 'react';
 import { db } from '../firebase/config';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { useAuth } from '../AuthContext';
 
-export const NovoLeadForm = () => {
-  const [nome, setNome] = useState('');
-  const [whatsapp, setWhatsapp] = useState('');
-  const [bairro, setBairro] = useState('');
-  const [notas, setNotas] = useState('');
+export const NovoLeadForm = ({ onComplete }) => {
+  const { user } = useAuth();
+  const [formData, setFormData] = useState({ nome: '', whatsapp: '', bairro: '', notas: '', valor: '' });
   const [loading, setLoading] = useState(false);
 
   const salvarLead = async (e) => {
     e.preventDefault();
     setLoading(true);
-
     try {
-      // Classificação Simples (Salvador) - Direto no código para não dar erro
       const bairrosNobres = ['pituba', 'horto', 'vitoria', 'caminho das arvores', 'barra', 'rio vermelho', 'graca'];
-      const eNobre = bairrosNobres.includes(bairro.toLowerCase().trim());
-      const categoria = eNobre ? 'HIGH TICKET' : 'TICKET MÉDIO';
-
-      await addDoc(collection(db, "leads"), {
-        nome,
-        whatsapp,
-        bairro,
-        notas,
-        categoria,
-        status: 'NOVO LEAD',
-        criadoEm: serverTimestamp()
-      });
-
-      alert(`✅ Sucesso! Lead ${categoria} cadastrado.`);
+      const eNobre = bairrosNobres.includes(formData.bairro.toLowerCase().trim());
       
-      setNome('');
-      setWhatsapp('');
-      setBairro('');
-      setNotas('');
-
-    } catch (error) {
-      console.error(error);
-      alert("Erro ao salvar. Verifique a conexão.");
-    }
-    setLoading(false);
+      await addDoc(collection(db, "leads"), {
+        ...formData,
+        categoria: eNobre ? 'HIGH TICKET' : 'TICKET MÉDIO',
+        status: 'Pendente',
+        userId: user.uid,
+        createdAt: serverTimestamp() // Unificado para createdAt
+      });
+      onComplete();
+    } catch (error) { alert("Erro ao salvar."); }
+    finally { setLoading(false); }
   };
 
   return (
-    <div className="p-4 max-w-md mx-auto bg-white rounded-xl shadow-md border border-gray-100">
-      <h2 className="text-[#9BB8CD] text-xl font-bold mb-4">Novo Lead - Klinni IA</h2>
-      <form onSubmit={salvarLead} className="space-y-3">
-        <input value={nome} onChange={(e) => setNome(e.target.value)} placeholder="Nome do Paciente" className="w-full p-2 border rounded" required />
-        <input value={whatsapp} onChange={(e) => setWhatsapp(e.target.value)} placeholder="WhatsApp" className="w-full p-2 border rounded" required />
-        <input value={bairro} onChange={(e) => setBairro(e.target.value)} placeholder="Bairro (Salvador)" className="w-full p-2 border rounded" required />
-        <textarea value={notas} onChange={(e) => setNotas(e.target.value)} placeholder="Observações" className="w-full p-2 border rounded h-24" />
-        <button type="submit" disabled={loading} className="w-full bg-[#7FA9D1] text-white p-3 rounded-lg font-bold">
+    <div style={styles.formCard}>
+      <h2 style={{fontWeight: 800, marginBottom: 20}}>Novo Registro</h2>
+      <form onSubmit={salvarLead} style={styles.flexCol}>
+        <input style={styles.input} placeholder="Nome do Paciente" required value={formData.nome} onChange={e => setFormData({...formData, nome: e.target.value})} />
+        <input style={styles.input} placeholder="WhatsApp (71...)" required value={formData.whatsapp} onChange={e => setFormData({...formData, whatsapp: e.target.value})} />
+        <input style={styles.input} placeholder="Bairro (Ex: Pituba)" required value={formData.bairro} onChange={e => setFormData({...formData, bairro: e.target.value})} />
+        <input style={styles.input} type="number" placeholder="Valor Estimado (R$)" value={formData.valor} onChange={e => setFormData({...formData, valor: e.target.value})} />
+        <textarea style={{...styles.input, height: 80}} placeholder="Observações" value={formData.notas} onChange={e => setFormData({...formData, notas: e.target.value})} />
+        <button type="submit" disabled={loading} style={styles.btnPrimary}>
           {loading ? "Salvando..." : "Cadastrar Lead"}
         </button>
       </form>
     </div>
   );
+};
+
+const styles = {
+  formCard: { background: '#fff', padding: 30, borderRadius: 24, border: '1px solid #e4e4e7', width: '100%', maxWidth: '450px' },
+  flexCol: { display: 'flex', flexDirection: 'column', gap: '12px' },
+  input: { padding: '12px', borderRadius: '10px', border: '1px solid #e4e4e7', outline: 'none' },
+  btnPrimary: { padding: '14px', borderRadius: '10px', border: 'none', background: '#f97316', color: '#fff', fontWeight: 'bold', cursor: 'pointer' }
 };
