@@ -1,4 +1,4 @@
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApps } from "firebase/app";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
 
@@ -11,9 +11,9 @@ const firebaseConfig = {
   appId: "1:761229946691:web:feeceb3caed42445be09f6"
 };
 
-const app = initializeApp(firebaseConfig);
+// Previne erro de inicialização dupla no Vercel
+const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
 export const auth = getAuth(app);
 export const db = getFirestore(app);
-
 export default app;
