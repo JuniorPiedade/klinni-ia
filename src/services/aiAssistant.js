@@ -1,34 +1,33 @@
-// 🧠 Cérebro de Vendas do Klinni IA (Integração Gemini)
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-// Inicializa a IA usando a chave que protegeremos depois
-const genAI = new GoogleGenerativeAI(process.env.REACT_APP_GEMINI_KEY);
+// A chave virá do arquivo .env no Vercel
+const API_KEY = process.env.REACT_APP_GEMINI_KEY || "";
 
-export const gerarSugestaoVenda = async (nome, objecao, notas, categoria) => {
-  const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-
-  const prompt = `
-    Aja como um Especialista em Neuromarketing para Clínicas de Luxo.
-    Paciente: ${nome} (Categoria: ${categoria})
-    Objeção principal: ${objecao}
-    Contexto das notas: ${notas}
-    
-    Diretrizes:
-    1. Foque na tecnologia de Tomografia 3D do Dr. Leonardo e no conforto absoluto.
-    2. Para leads HIGH TICKET, seja extremamente exclusivo e não fale de preço.
-    3. Para leads TICKET PLUS, foque na segurança do resultado e autoridade.
-    
-    Retorne em 3 partes: 
-    1. Análise do Medo Oculto.
-    2. Script de WhatsApp pronto para copiar.
-    3. Dica de Ouro tática para a vendedora (CRC).
-  `;
+export const gerarSugestaoVenda = async (nome, notas, categoria) => {
+  if (!API_KEY) return "Configure a chave da IA para receber sugestões.";
 
   try {
+    const genAI = new GoogleGenerativeAI(API_KEY);
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+
+    const prompt = `
+      Aja como Especialista em Neuromarketing para Clínicas de Luxo.
+      Paciente: ${nome} (Categoria: ${categoria})
+      Contexto: ${notas}
+      
+      Diretrizes:
+      1. Foque na tecnologia de Tomografia 3D e conforto do Dr. Leonardo.
+      2. Se for HIGH TICKET: Seja exclusivo, não fale de preço.
+      3. Se for TICKET PLUS: Foque em segurança e autoridade.
+      
+      Retorne um script curto para WhatsApp e uma dica tática.
+    `;
+
     const result = await model.generateContent(prompt);
     const response = await result.response;
     return response.text();
   } catch (error) {
-    return "Erro ao gerar dica da IA. Verifique a conexão.";
+    console.error("Erro Gemini:", error);
+    return "IA offline. Use o script padrão de atendimento.";
   }
 };
